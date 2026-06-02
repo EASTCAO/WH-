@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>作品评优投票</title>
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body class="auth-locked">
+    <section id="authScreen" class="auth-screen">
+      <div class="auth-card">
+        <div class="auth-logo" aria-hidden="true"></div>
+        <h1>作品评优</h1>
+        <p>登录后进入本月作品评审</p>
+        <div class="auth-field">
+          <label for="authName">用户名</label>
+          <input id="authName" type="text" placeholder="请输入姓名或管理员口令" autocomplete="username">
+        </div>
+        <button id="authLogin" type="button">登录</button>
+        <div id="authStatus" class="auth-status"></div>
+      </div>
+    </section>
+
+    <header class="topbar">
+      <div>
+        <h1>作品评优</h1>
+      </div>
+      <div class="top-actions">
+        <div class="identity">
+          <div class="identity-login">
+            <input id="voterName" type="text" placeholder="请输入自己的姓名" autocomplete="off">
+            <button id="voterLogin" type="button">登录</button>
+            <button id="voterLogout" type="button" hidden>退出</button>
+          </div>
+          <div id="voterLoginStatus" class="identity-status"></div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section id="welcomePanel" class="welcome-panel">
+        <div>
+          <span id="phaseBadge" class="phase-badge">评优准备中</span>
+          <h2 id="welcomeTitle">评优开始啦</h2>
+          <p id="welcomeText">输入自己的姓名进入投票，系统会自动隐藏摄影师信息，保持公平。</p>
+        </div>
+      </section>
+
+      <section id="adminPanel" class="admin-panel" hidden>
+        <div class="admin-panel-head">
+          <div>
+            <h2>后台管理</h2>
+            <p class="muted">流程 / 月份 / 记录</p>
+          </div>
+          <button id="adminToggle" class="admin-exit" type="button">退出后台</button>
+        </div>
+        <div class="admin-controls">
+          <input id="adminCode" type="password" placeholder="管理员口令">
+          <button id="statusToggle" type="button" class="status-toggle" hidden>开始投票</button>
+          <button id="publishToggle" type="button" class="publish-toggle" disabled>公布结果</button>
+          <button id="clearCurrentPeriod" type="button" hidden>清空当前月</button>
+        </div>
+        <div id="periodAdmin" class="period-admin" hidden>
+          <div>
+            <h3>评优月份</h3>
+            <p id="periodStatus" class="muted">按月份保存作品、投票记录和公布状态。</p>
+          </div>
+          <div class="period-controls">
+            <select id="periodSelect" aria-label="选择评优月份"></select>
+            <button id="createNextPeriod" type="button">新建下月</button>
+          </div>
+        </div>
+        <details id="photographerAdmin" class="photographer-admin admin-card" hidden>
+          <summary>摄影师名单</summary>
+          <div class="photographer-tools">
+            <input id="photographerName" type="text" placeholder="添加摄影师姓名">
+            <button id="addPhotographer" type="button">添加摄影师</button>
+          </div>
+          <div id="photographerList" class="photographer-list"></div>
+        </details>
+        <details id="ballotAdmin" class="ballot-admin admin-card" hidden>
+          <summary>投票记录</summary>
+          <div id="ballotList" class="ballot-list"></div>
+        </details>
+      </section>
+
+      <section class="module-board" aria-label="评优模块">
+        <div class="section-heading">
+          <h2>Review Modules</h2>
+          <span>选择模块 / 查看作品 / 完成投票</span>
+        </div>
+        <div id="moduleGrid" class="module-grid"></div>
+        <div id="uploadStatus" class="status"></div>
+      </section>
+
+      <section class="vote-toolbar">
+        <div>
+          <strong id="activeModuleTitle">图片（AI）</strong>
+          <span id="selectedCount">已选作品 0 / 3</span>
+        </div>
+        <button id="submitVote" type="button">提交本模块投票</button>
+      </section>
+
+      <section id="gallery" class="gallery" aria-live="polite"></section>
+
+      <section class="results-panel">
+        <div>
+          <h2 id="resultsTitle">最终结果</h2>
+          <p id="resultsNote" class="muted">管理员公布后显示最终排名。</p>
+        </div>
+        <div id="results" class="results"></div>
+      </section>
+    </main>
+
+    <template id="entryTemplate">
+      <article class="entry-card">
+        <button class="vote-check" type="button" aria-label="选择整套作品"></button>
+        <button class="delete-entry" type="button" aria-label="删除作品">删除</button>
+        <div class="folder-icon" aria-hidden="true">
+          <span></span>
+        </div>
+        <div class="entry-info">
+          <div class="entry-title"></div>
+          <div class="entry-meta"></div>
+          <div class="entry-hint">点击查看全部图片</div>
+        </div>
+      </article>
+    </template>
+
+    <dialog id="previewDialog" class="preview-dialog">
+      <div class="preview-shell">
+        <header class="preview-header">
+          <div>
+            <h2 id="previewTitle">作品预览</h2>
+            <p id="previewMeta"></p>
+          </div>
+          <button id="closePreview" class="round-button" type="button" aria-label="关闭">×</button>
+        </header>
+        <div id="mediaPreviewGrid" class="media-preview-grid"></div>
+      </div>
+    </dialog>
+
+    <dialog id="resultDialog" class="result-dialog">
+      <div class="result-dialog-shell">
+        <header class="result-dialog-header">
+          <div>
+            <span class="phase-badge">结果已公布</span>
+            <h2>最终评优结果已公布</h2>
+            <p>每个模块展示前三名，完整排名可在页面下方查看。</p>
+          </div>
+          <button id="closeResultDialog" class="round-button" type="button" aria-label="关闭">×</button>
+        </header>
+        <div id="resultDialogGrid" class="result-dialog-grid"></div>
+      </div>
+    </dialog>
+
+    <dialog id="imageViewer" class="image-viewer">
+      <div class="viewer-toolbar">
+        <div>
+          <h2 id="viewerTitle">图片查看</h2>
+          <p id="viewerMeta"></p>
+        </div>
+        <div class="viewer-actions">
+          <button id="viewerZoomOut" class="round-button" type="button" aria-label="缩小">−</button>
+          <button id="viewerFit" class="fit-button" type="button">适应</button>
+          <button id="viewerZoomIn" class="round-button" type="button" aria-label="放大">+</button>
+          <button id="viewerClose" class="round-button" type="button" aria-label="关闭">×</button>
+        </div>
+      </div>
+      <button id="viewerPrev" class="viewer-nav viewer-prev" type="button" aria-label="上一张">‹</button>
+      <div id="viewerStage" class="viewer-stage"></div>
+      <button id="viewerNext" class="viewer-nav viewer-next" type="button" aria-label="下一张">›</button>
+    </dialog>
+
+    <div id="appToast" class="app-toast" hidden></div>
+    <script src="/app.js"></script>
+  </body>
+</html>
