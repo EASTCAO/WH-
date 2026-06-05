@@ -34,6 +34,11 @@ let isSubmittingVote = false;
 let resultDialogDismissed = false;
 const selected = new Map();
 
+const THEME_KEY = "photoReviewTheme";
+const savedTheme = localStorage.getItem(THEME_KEY) || "light";
+document.body.dataset.theme = savedTheme === "dark" ? "dark" : "light";
+
+const themeToggle = document.querySelector("#themeToggle");
 const authScreen = document.querySelector("#authScreen");
 const authName = document.querySelector("#authName");
 const authLogin = document.querySelector("#authLogin");
@@ -124,6 +129,17 @@ function setAuthenticated(value) {
 
 function setAuthStatus(text) {
   if (authStatus) authStatus.textContent = text;
+}
+
+function applyTheme(theme) {
+  const finalTheme = theme === "dark" ? "dark" : "light";
+  document.body.dataset.theme = finalTheme;
+  localStorage.setItem(THEME_KEY, finalTheme);
+  if (!themeToggle) return;
+  themeToggle.setAttribute("aria-pressed", String(finalTheme === "dark"));
+  themeToggle.setAttribute("aria-label", finalTheme === "dark" ? "切换浅色模式" : "切换深色模式");
+  const text = themeToggle.querySelector(".theme-toggle-text");
+  if (text) text.textContent = finalTheme === "dark" ? "浅色" : "深色";
 }
 
 function syncAuthFields() {
@@ -1067,6 +1083,12 @@ if (authLogin) authLogin.addEventListener("click", loginFromAuthScreen);
 if (authName) {
   authName.addEventListener("keydown", event => {
     if (event.key === "Enter") loginFromAuthScreen();
+  });
+}
+if (themeToggle) {
+  applyTheme(document.body.dataset.theme);
+  themeToggle.addEventListener("click", () => {
+    applyTheme(document.body.dataset.theme === "dark" ? "light" : "dark");
   });
 }
 voterLogin.addEventListener("click", loginPhotographer);
