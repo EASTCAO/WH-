@@ -3594,22 +3594,6 @@ body {
   background: #ffffff;
 }
 
-.auth-card {
-  position: relative;
-}
-
-.auth-card .auth-theme-toggle {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  width: auto;
-  min-width: 64px;
-  height: 30px;
-  margin: 0;
-  padding: 0 10px;
-  font-size: 12px;
-}
-
 body.is-admin .top-actions {
   padding-right: 112px;
 }
