@@ -171,6 +171,14 @@ function writeDb(db) {
   fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2), "utf8");
 }
 
+let dbWriteQueue = Promise.resolve();
+
+function withDbWriteLock(task) {
+  const run = dbWriteQueue.then(task, task);
+  dbWriteQueue = run.catch(() => {});
+  return run;
+}
+
 function sendJson(res, status, body) {
   const text = JSON.stringify(body);
   res.writeHead(status, {
@@ -470,7 +478,9 @@ async function handleUpload(req, res) {
   const payload = await collectJson(req);
   const files = Array.isArray(payload.files) ? payload.files : [];
   const fallbackModuleName = MODULE_BY_NAME.has(payload.moduleName) ? payload.moduleName : MODULES[0].name;
-  const db = readDb();
+  const dbSnapshot = readDb();
+  const periodId = dbSnapshot.currentPeriodId;
+  const photographers = dbSnapshot.photographers || [];
   const grouped = new Map();
 
   if (files.length > MAX_FILES_PER_UPLOAD) {
@@ -484,45 +494,33 @@ async function handleUpload(req, res) {
     if (isExcludedUploadPath(relativePath)) continue;
 
     const info = parseUploadPath(relativePath, fallbackModuleName);
-    const knownPhotographer = knownPhotographerName([info.photographer, info.workFolder, info.sku, info.title, relativePath], db.photographers);
+    const knownPhotographer = knownPhotographerName([info.photographer, info.workFolder, info.sku, info.title, relativePath], photographers);
     if (knownPhotographer) info.photographer = knownPhotographer;
-    if (!knownPhotographer && !(db.photographers || []).includes(info.photographer)) info.photographer = "未识别摄影师";
+    if (!knownPhotographer && !photographers.includes(info.photographer)) info.photographer = "未识别摄影师";
     const expectedKind = MODULE_BY_NAME.get(info.moduleName)?.kind;
     const mediaKind = IMAGE_TYPES.has(ext) ? "image" : VIDEO_TYPES.has(ext) ? "video" : "file";
     if (!MODULE_BY_NAME.has(info.moduleName)) continue;
     if (expectedKind && expectedKind !== mediaKind) continue;
 
-    const key = `${db.currentPeriodId}|${info.moduleName}|${info.photographer}|${info.sku}|${info.title}`;
+    const key = `${periodId}|${info.moduleName}|${info.photographer}|${info.sku}|${info.title}`;
     if (!grouped.has(key)) grouped.set(key, { ...info, files: [] });
     grouped.get(key).files.push({ ...file, relativePath, ext, mediaKind });
   }
 
   let mediaTotal = 0;
+  const uploadNonce = crypto.randomBytes(6).toString("hex");
+  const processedGroups = [];
+
   for (const group of grouped.values()) {
-    const id = hash(`${db.currentPeriodId}|${group.moduleName}|${group.photographer}|${group.sku}|${group.title}`);
+    const id = hash(`${periodId}|${group.moduleName}|${group.photographer}|${group.sku}|${group.title}`);
     const entryDir = path.join(UPLOAD_DIR, id);
     fs.mkdirSync(entryDir, { recursive: true });
+    const media = [];
 
-    const existing = db.entries.find(entry => entry.id === id);
-    const entry = existing || {
-      id,
-      periodId: db.currentPeriodId,
-      moduleId: group.moduleId,
-      moduleName: group.moduleName,
-      moduleKind: group.moduleKind,
-      photographer: group.photographer,
-      sku: group.sku,
-      title: group.title,
-      sequence: db.nextSequence++,
-      media: [],
-      createdAt: new Date().toISOString()
-    };
-
-    entry.media ||= [];
     for (const [index, file] of group.files.entries()) {
       const buffer = Buffer.from(String(file.data).split(",").pop(), "base64");
-      const serial = String(entry.media.length + index + 1).padStart(2, "0");
-      const filename = `${safeSegment(group.sku)}_${serial}${file.ext}`;
+      const serial = String(mediaTotal + index + 1).padStart(3, "0");
+      const filename = `${safeSegment(group.sku)}_${uploadNonce}_${serial}${file.ext}`;
       const originalFilename = `original_${filename}`;
       const originalDiskPath = path.join(entryDir, originalFilename);
       fs.writeFileSync(originalDiskPath, buffer);
@@ -535,7 +533,7 @@ async function handleUpload(req, res) {
       }
 
       const displayFilename = path.basename(displayDiskPath);
-      entry.media.push({
+      media.push({
         src: `/data/uploads/${id}/${displayFilename}`,
         originalSrc: `/data/uploads/${id}/${originalFilename}`,
         kind: file.mediaKind,
@@ -545,11 +543,35 @@ async function handleUpload(req, res) {
       mediaTotal += 1;
     }
 
-    if (!existing) db.entries.push(entry);
+    processedGroups.push({ ...group, id, periodId, media });
   }
 
-  db.entries.sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
-  writeDb(db);
+  await withDbWriteLock(async () => {
+    const db = readDb();
+    for (const group of processedGroups) {
+      const existing = db.entries.find(entry => entry.id === group.id);
+      const entry = existing || {
+        id: group.id,
+        periodId: group.periodId,
+        moduleId: group.moduleId,
+        moduleName: group.moduleName,
+        moduleKind: group.moduleKind,
+        photographer: group.photographer,
+        sku: group.sku,
+        title: group.title,
+        sequence: db.nextSequence++,
+        media: [],
+        createdAt: new Date().toISOString()
+      };
+
+      entry.media ||= [];
+      entry.media.push(...group.media);
+      if (!existing) db.entries.push(entry);
+    }
+    db.entries.sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
+    writeDb(db);
+  });
+
   sendJson(res, 200, { ok: true, entries: grouped.size, media: mediaTotal });
 }
 
