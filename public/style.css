@@ -4028,6 +4028,28 @@ body[data-theme="dark"] .module-card.active {
 }
 
 body[data-theme="dark"] .module-drop-text {
-  border-color: rgba(220, 224, 205, 0.14);
-  background: rgba(245, 242, 232, 0.045);
+  width: fit-content;
+  min-width: 104px;
+  max-width: 100%;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px;
+  padding: 0 18px;
+  border: 1px dashed rgba(213, 223, 196, 0.26);
+  border-radius: 999px;
+  background: rgba(213, 223, 196, 0.055);
+  color: rgba(213, 223, 196, 0.74);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+body[data-theme="dark"] .module-card:hover .module-drop-text,
+body[data-theme="dark"] .module-card.active .module-drop-text,
+body[data-theme="dark"] .module-card.dragging .module-drop-text {
+  border-color: rgba(213, 223, 196, 0.48);
+  background: rgba(213, 223, 196, 0.10);
+  color: #eef5dd;
 }
