@@ -38,7 +38,7 @@ const THEME_KEY = "photoReviewTheme";
 const savedTheme = localStorage.getItem(THEME_KEY) || "light";
 document.body.dataset.theme = savedTheme === "dark" ? "dark" : "light";
 
-const themeToggle = document.querySelector("#themeToggle");
+const themeToggles = document.querySelectorAll("[data-theme-toggle]");
 const authScreen = document.querySelector("#authScreen");
 const authName = document.querySelector("#authName");
 const authLogin = document.querySelector("#authLogin");
@@ -135,11 +135,12 @@ function applyTheme(theme) {
   const finalTheme = theme === "dark" ? "dark" : "light";
   document.body.dataset.theme = finalTheme;
   localStorage.setItem(THEME_KEY, finalTheme);
-  if (!themeToggle) return;
-  themeToggle.setAttribute("aria-pressed", String(finalTheme === "dark"));
-  themeToggle.setAttribute("aria-label", finalTheme === "dark" ? "切换浅色模式" : "切换深色模式");
-  const text = themeToggle.querySelector(".theme-toggle-text");
-  if (text) text.textContent = finalTheme === "dark" ? "浅色" : "深色";
+  themeToggles.forEach(toggle => {
+    toggle.setAttribute("aria-pressed", String(finalTheme === "dark"));
+    toggle.setAttribute("aria-label", finalTheme === "dark" ? "切换浅色模式" : "切换深色模式");
+    const text = toggle.querySelector(".theme-toggle-text");
+    if (text) text.textContent = finalTheme === "dark" ? "浅色" : "深色";
+  });
 }
 
 function syncAuthFields() {
@@ -529,6 +530,7 @@ function renderWelcome() {
 
 function renderStatusControls() {
   adminPanel.classList.toggle("is-active", adminMode);
+  document.body.classList.toggle("is-admin", adminMode);
   adminCode.hidden = adminMode;
   statusToggle.hidden = !adminMode;
   statusToggle.textContent = votingOpen ? "恢复上传" : "开始投票";
@@ -1085,10 +1087,12 @@ if (authName) {
     if (event.key === "Enter") loginFromAuthScreen();
   });
 }
-if (themeToggle) {
+if (themeToggles.length) {
   applyTheme(document.body.dataset.theme);
-  themeToggle.addEventListener("click", () => {
-    applyTheme(document.body.dataset.theme === "dark" ? "light" : "dark");
+  themeToggles.forEach(toggle => {
+    toggle.addEventListener("click", () => {
+      applyTheme(document.body.dataset.theme === "dark" ? "light" : "dark");
+    });
   });
 }
 voterLogin.addEventListener("click", loginPhotographer);
