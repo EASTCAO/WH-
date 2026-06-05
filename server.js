@@ -17,6 +17,8 @@ const MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB || 512);
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 const MAX_FILES_PER_UPLOAD = Number(process.env.MAX_FILES_PER_UPLOAD || 200);
 const IMAGE_WEBP_EFFORT = Number(process.env.IMAGE_WEBP_EFFORT || 2);
+const IMAGE_OPTIMIZE_MIN_BYTES = Number(process.env.IMAGE_OPTIMIZE_MIN_MB || 4) * 1024 * 1024;
+const IMAGE_MAX_DIMENSION = Number(process.env.IMAGE_MAX_DIMENSION || 2200);
 const VIDEO_PRESET = process.env.VIDEO_PRESET || "veryfast";
 
 if (!ADMIN_CODE && process.env.NODE_ENV === "production") {
@@ -400,12 +402,18 @@ function runTool(command, args) {
 
 async function createOptimizedMedia(sourcePath, ext, mediaKind) {
   if (mediaKind === "image") {
+    const browserReadyTypes = new Set([".jpg", ".jpeg", ".jfif", ".png", ".webp", ".gif", ".avif"]);
+    const fileSize = fs.statSync(sourcePath).size;
+    if (browserReadyTypes.has(ext) && fileSize <= IMAGE_OPTIMIZE_MIN_BYTES) {
+      return sourcePath;
+    }
+
     const targetPath = sourcePath.slice(0, -ext.length) + ".webp";
     await sharp(sourcePath)
       .rotate()
       .resize({
-        width: 2200,
-        height: 2200,
+        width: IMAGE_MAX_DIMENSION,
+        height: IMAGE_MAX_DIMENSION,
         fit: "inside",
         withoutEnlargement: true
       })
@@ -729,7 +737,7 @@ function handleApi(req, res) {
       optimization: {
         images: true,
         videos: HAS_FFMPEG,
-        imageMode: "WebP展示版，保留原图",
+        imageMode: "小图直接展示，大图生成WebP展示版，保留原图",
         videoMode: HAS_FFMPEG ? "MP4展示版，保留原视频" : "未启用：未检测到 ffmpeg"
       }
     });
