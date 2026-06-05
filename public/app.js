@@ -35,6 +35,7 @@ let resultDialogDismissed = false;
 const selected = new Map();
 
 const THEME_KEY = "photoReviewTheme";
+const UPLOAD_BATCH_SIZE = 12;
 const savedTheme = localStorage.getItem(THEME_KEY) || "light";
 document.body.dataset.theme = savedTheme === "dark" ? "dark" : "light";
 
@@ -893,6 +894,14 @@ async function mapLimit(items, limit, mapper, onProgress) {
   return results;
 }
 
+function chunkArray(items, size) {
+  const chunks = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
 function fileEntryToFile(entry, pathPrefix) {
   return new Promise((resolve, reject) => {
     entry.file(file => {
@@ -946,18 +955,27 @@ async function uploadFiles(files, moduleName) {
     setStatus("文件夹里没有可识别的图片或视频");
     return;
   }
-  setStatus(`正在上传到 ${moduleName}：读取 ${mediaFiles.length} 个媒体文件...`);
+  const batches = chunkArray(mediaFiles, UPLOAD_BATCH_SIZE);
+  let uploadedFiles = 0;
+  let totalMedia = 0;
+  setStatus(`正在上传到 ${moduleName}：共 ${mediaFiles.length} 个媒体文件，分 ${batches.length} 批处理...`);
   try {
-    const payloadFiles = await mapLimit(mediaFiles, 4, readFile, (done, total) => {
-      if (done === total || done % 5 === 0) setStatus(`正在上传到 ${moduleName}：读取 ${done} / ${total} 个媒体文件...`);
-    });
-    setStatus(`正在上传到 ${moduleName}：文件已读取，系统正在上传并压缩...`);
-    const result = await fetchJson("/api/upload", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ moduleName, files: payloadFiles })
-    });
-    setStatus(`${moduleName} 上传完成：识别 ${result.entries} 个作品，上传 ${result.media} 个媒体文件。`);
+    for (const [batchIndex, batch] of batches.entries()) {
+      const batchNo = batchIndex + 1;
+      const payloadFiles = await mapLimit(batch, 4, readFile, done => {
+        setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batches.length} 批，已读取 ${uploadedFiles + done}/${mediaFiles.length} 个文件...`);
+      });
+      setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batches.length} 批正在上传并生成展示版...`);
+      const result = await fetchJson("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ moduleName, files: payloadFiles })
+      });
+      uploadedFiles += batch.length;
+      totalMedia += result.media || 0;
+      setStatus(`正在上传到 ${moduleName}：已完成 ${uploadedFiles}/${mediaFiles.length} 个文件，继续处理...`);
+    }
+    setStatus(`${moduleName} 上传完成：已处理 ${totalMedia} 个媒体文件，作品列表已刷新。`);
     await loadData();
   } catch (error) {
     setStatus(error.message);

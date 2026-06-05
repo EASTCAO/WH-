@@ -16,6 +16,8 @@ const ADMIN_CODE = String(process.env.ADMIN_CODE || "").trim();
 const MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB || 512);
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 const MAX_FILES_PER_UPLOAD = Number(process.env.MAX_FILES_PER_UPLOAD || 200);
+const IMAGE_WEBP_EFFORT = Number(process.env.IMAGE_WEBP_EFFORT || 2);
+const VIDEO_PRESET = process.env.VIDEO_PRESET || "veryfast";
 
 if (!ADMIN_CODE && process.env.NODE_ENV === "production") {
   console.error("ADMIN_CODE is required in production.");
@@ -407,7 +409,7 @@ async function createOptimizedMedia(sourcePath, ext, mediaKind) {
         fit: "inside",
         withoutEnlargement: true
       })
-      .webp({ quality: 88, effort: 4 })
+      .webp({ quality: 88, effort: IMAGE_WEBP_EFFORT })
       .toFile(targetPath);
     return targetPath;
   }
@@ -419,7 +421,7 @@ async function createOptimizedMedia(sourcePath, ext, mediaKind) {
       "-i", sourcePath,
       "-map_metadata", "-1",
       "-c:v", "libx264",
-      "-preset", "slow",
+      "-preset", VIDEO_PRESET,
       "-crf", "20",
       "-c:a", "aac",
       "-b:a", "160k",
