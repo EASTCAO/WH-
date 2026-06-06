@@ -20,6 +20,7 @@ const IMAGE_WEBP_EFFORT = Number(process.env.IMAGE_WEBP_EFFORT || 2);
 const IMAGE_OPTIMIZE_MIN_BYTES = Number(process.env.IMAGE_OPTIMIZE_MIN_MB || 4) * 1024 * 1024;
 const IMAGE_MAX_DIMENSION = Number(process.env.IMAGE_MAX_DIMENSION || 2200);
 const VIDEO_PRESET = process.env.VIDEO_PRESET || "veryfast";
+const OPTIMIZE_CONCURRENCY = Math.max(1, Number(process.env.OPTIMIZE_CONCURRENCY || 1));
 
 if (!ADMIN_CODE && process.env.NODE_ENV === "production") {
   console.error("ADMIN_CODE is required in production.");
@@ -404,7 +405,8 @@ function voterMedia(entry) {
   const media = entry.media || (entry.images || []).map(src => ({ src, kind: "image" }));
   return media.map(item => ({
     src: item.src,
-    kind: item.kind
+    kind: item.kind,
+    processing: Boolean(item.processing)
   }));
 }
 
@@ -476,6 +478,69 @@ function runTool(command, args) {
   });
 }
 
+const optimizeQueue = [];
+let optimizeActive = 0;
+
+function optimizeQueueState() {
+  return {
+    pending: optimizeQueue.length,
+    active: optimizeActive,
+    concurrency: OPTIMIZE_CONCURRENCY
+  };
+}
+
+function queueMediaOptimization(job) {
+  optimizeQueue.push(job);
+  processOptimizeQueue();
+}
+
+function processOptimizeQueue() {
+  while (optimizeActive < OPTIMIZE_CONCURRENCY && optimizeQueue.length) {
+    const job = optimizeQueue.shift();
+    optimizeActive += 1;
+    optimizeMediaJob(job)
+      .catch(error => {
+        console.warn(`Background optimize failed for ${job.originalFilename}: ${error.message}`);
+      })
+      .finally(() => {
+        optimizeActive -= 1;
+        processOptimizeQueue();
+      });
+  }
+}
+
+async function optimizeMediaJob(job) {
+  let displayDiskPath = job.originalDiskPath;
+  try {
+    displayDiskPath = await createOptimizedMedia(job.originalDiskPath, job.ext, job.mediaKind);
+  } catch (error) {
+    await markMediaOptimized(job.entryId, job.mediaId, null, error.message);
+    throw error;
+  }
+
+  const optimized = displayDiskPath !== job.originalDiskPath;
+  const displayFilename = path.basename(displayDiskPath);
+  await markMediaOptimized(job.entryId, job.mediaId, `/data/uploads/${job.entryId}/${displayFilename}`, "");
+  console.log(`Background optimize finished: ${job.originalFilename}${optimized ? " -> " + displayFilename : ""}`);
+}
+
+async function markMediaOptimized(entryId, mediaId, displaySrc, errorMessage) {
+  await withDbWriteLock(async () => {
+    const db = readDb();
+    const entry = (db.entries || []).find(item => item.id === entryId);
+    const media = entry?.media?.find(item => item.id === mediaId);
+    if (!media) return;
+    if (displaySrc) {
+      media.src = displaySrc;
+      media.optimized = displaySrc !== media.originalSrc;
+    }
+    media.processing = false;
+    if (errorMessage) media.error = errorMessage;
+    else delete media.error;
+    writeDb(db);
+  });
+}
+
 async function createOptimizedMedia(sourcePath, ext, mediaKind) {
   if (mediaKind === "image") {
     const browserReadyTypes = new Set([".jpg", ".jpeg", ".jfif", ".png", ".webp", ".gif", ".avif"]);
@@ -484,7 +549,7 @@ async function createOptimizedMedia(sourcePath, ext, mediaKind) {
       return sourcePath;
     }
 
-    const targetPath = sourcePath.slice(0, -ext.length) + ".webp";
+    const targetPath = sourcePath.slice(0, -ext.length) + "_display.webp";
     await sharp(sourcePath)
       .rotate()
       .resize({
@@ -499,7 +564,7 @@ async function createOptimizedMedia(sourcePath, ext, mediaKind) {
   }
 
   if (mediaKind === "video" && HAS_FFMPEG) {
-    const targetPath = sourcePath.slice(0, -ext.length) + ".mp4";
+    const targetPath = sourcePath.slice(0, -ext.length) + "_display.mp4";
     await runTool(FFMPEG_PATH, [
       "-y",
       "-i", sourcePath,
@@ -582,6 +647,7 @@ async function handleUpload(req, res) {
   let mediaTotal = 0;
   const uploadNonce = crypto.randomBytes(6).toString("hex");
   const processedGroups = [];
+  const optimizeJobs = [];
 
   for (const group of grouped.values()) {
     const id = hash(`${periodId}|${group.moduleName}|${group.photographer}|${group.sku}|${group.title}`);
@@ -596,21 +662,23 @@ async function handleUpload(req, res) {
       const originalFilename = `original_${filename}`;
       const originalDiskPath = path.join(entryDir, originalFilename);
       fs.writeFileSync(originalDiskPath, buffer);
-
-      let displayDiskPath = originalDiskPath;
-      try {
-        displayDiskPath = await createOptimizedMedia(originalDiskPath, file.ext, file.mediaKind);
-      } catch (error) {
-        console.warn(`Optimize failed for ${originalFilename}: ${error.message}`);
-      }
-
-      const displayFilename = path.basename(displayDiskPath);
+      const mediaId = hash(`${id}|${originalFilename}`);
       media.push({
-        src: `/data/uploads/${id}/${displayFilename}`,
+        id: mediaId,
+        src: `/data/uploads/${id}/${originalFilename}`,
         originalSrc: `/data/uploads/${id}/${originalFilename}`,
         kind: file.mediaKind,
         name: file.name || path.basename(file.relativePath),
-        optimized: displayDiskPath !== originalDiskPath
+        optimized: false,
+        processing: true
+      });
+      optimizeJobs.push({
+        entryId: id,
+        mediaId,
+        originalDiskPath,
+        originalFilename,
+        ext: file.ext,
+        mediaKind: file.mediaKind
       });
       mediaTotal += 1;
     }
@@ -643,6 +711,8 @@ async function handleUpload(req, res) {
     db.entries.sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
     writeDb(db);
   });
+
+  for (const job of optimizeJobs) queueMediaOptimization(job);
 
   sendJson(res, 200, { ok: true, entries: grouped.size, media: mediaTotal });
 }
@@ -828,6 +898,7 @@ function handleApi(req, res) {
       dataDir: DATA_DIR,
       uploadLimitMB: MAX_UPLOAD_MB,
       maxFilesPerUpload: MAX_FILES_PER_UPLOAD,
+      optimizeQueue: optimizeQueueState(),
       optimization: {
         images: true,
         videos: HAS_FFMPEG,

@@ -38,6 +38,7 @@ const THEME_KEY = "photoReviewTheme";
 const UPLOAD_BATCH_SIZE = 12;
 let uploadQueue = Promise.resolve();
 let uploadQueueLength = 0;
+let processingRefreshTimer = null;
 const savedTheme = localStorage.getItem(THEME_KEY) || "light";
 document.body.dataset.theme = savedTheme === "dark" ? "dark" : "light";
 
@@ -306,6 +307,22 @@ async function loadData() {
   syncAuthFields();
   setAuthenticated(Boolean(loggedInName || adminMode));
   render();
+  scheduleProcessingRefresh();
+}
+
+function hasProcessingMedia() {
+  return entries.some(entry => (entry.media || []).some(item => item.processing));
+}
+
+function scheduleProcessingRefresh() {
+  if (processingRefreshTimer || !hasProcessingMedia()) return;
+  processingRefreshTimer = window.setTimeout(async () => {
+    processingRefreshTimer = null;
+    if (!hasProcessingMedia()) return;
+    try {
+      await loadData();
+    } catch {}
+  }, 5000);
 }
 
 function renderPhotographerLogin() {
@@ -658,10 +675,11 @@ function openPreview(entry) {
   previewTitle.textContent = entryTitle(entry);
   previewMeta.textContent = entryMeta(entry);
   mediaPreviewGrid.innerHTML = entry.media.map((item, index) => `
-    <button class="media-preview-card" type="button" data-index="${index}">
+    <button class="media-preview-card${item.processing ? " processing" : ""}" type="button" data-index="${index}">
       ${item.kind === "video"
         ? `<video src="${item.src}" muted preload="metadata"></video>`
         : `<img src="${item.src}" alt="${entryTitle(entry)} 第 ${index + 1} 张">`}
+      ${item.processing ? `<span class="media-processing">处理中</span>` : ""}
     </button>
   `).join("");
   mediaPreviewGrid.querySelectorAll(".media-preview-card").forEach(button => {
