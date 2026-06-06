@@ -64,6 +64,7 @@ const uploadStatus = document.querySelector("#uploadStatus");
 const selectedCount = document.querySelector("#selectedCount");
 const activeModuleTitle = document.querySelector("#activeModuleTitle");
 const submitVote = document.querySelector("#submitVote");
+const voteToolbar = document.querySelector(".vote-toolbar");
 const entryTemplate = document.querySelector("#entryTemplate");
 const moduleGrid = document.querySelector("#moduleGrid");
 const adminCode = document.querySelector("#adminCode");
@@ -114,16 +115,18 @@ function setStatus(text) {
   uploadStatus.textContent = text;
 }
 
-function showToast(text) {
+function showToast(text, tone = "") {
   if (!appToast) return;
   window.clearTimeout(toastTimer);
   appToast.textContent = text;
   appToast.hidden = false;
+  appToast.classList.toggle("success", tone === "success");
   appToast.classList.add("show");
   toastTimer = window.setTimeout(() => {
     appToast.classList.remove("show");
+    appToast.classList.remove("success");
     appToast.hidden = true;
-  }, 2200);
+  }, tone === "success" ? 4200 : 2200);
 }
 
 function setAuthenticated(value) {
@@ -174,6 +177,10 @@ function hasVotableEntries(moduleName) {
   return moduleEntries(moduleName).length > 0;
 }
 
+function isModuleCompleted(moduleName) {
+  return completedModules.has(moduleName);
+}
+
 function nextPendingModule(fromModuleName) {
   const startIndex = Math.max(0, modules.findIndex(module => module.name === fromModuleName));
   const orderedModules = modules.slice(startIndex + 1).concat(modules.slice(0, startIndex + 1));
@@ -181,7 +188,10 @@ function nextPendingModule(fromModuleName) {
 }
 
 function updateSelectedCount() {
-  selectedCount.textContent = `已选作品 ${activeBucket().size} / ${activeLimit()}`;
+  const picked = activeBucket().size;
+  selectedCount.textContent = isModuleCompleted(activeModule.name)
+    ? `已提交 ${picked} / ${activeLimit()}，可重新选择后覆盖`
+    : `已选作品 ${picked} / ${activeLimit()}`;
 }
 
 function entryTitle(entry) {
@@ -549,8 +559,10 @@ function renderWelcome() {
 }
 
 function renderStatusControls() {
+  const activeCompleted = activeModule ? isModuleCompleted(activeModule.name) : false;
   adminPanel.classList.toggle("is-active", adminMode);
   document.body.classList.toggle("is-admin", adminMode);
+  voteToolbar?.classList.toggle("is-completed", activeCompleted);
   adminCode.hidden = adminMode;
   statusToggle.hidden = !adminMode;
   statusToggle.textContent = votingOpen ? "恢复上传" : "开始投票";
@@ -560,7 +572,9 @@ function renderStatusControls() {
   if (clearCurrentPeriod) clearCurrentPeriod.hidden = !adminMode;
   submitVote.disabled = !votingOpen || !voterName() || isSubmittingVote;
   submitVote.classList.toggle("is-loading", isSubmittingVote);
-  submitVote.textContent = isSubmittingVote ? "提交中..." : "提交本模块投票";
+  submitVote.textContent = isSubmittingVote
+    ? "提交中..."
+    : activeCompleted ? "重新提交本模块" : "提交本模块投票";
 }
 
 function renderModules() {
@@ -573,7 +587,7 @@ function renderModules() {
   moduleGrid.innerHTML = modules.map((module, index) => {
     const count = moduleEntries(module.name).length;
     const picked = selected.get(module.name)?.size || 0;
-    const completed = completedModules.has(module.name);
+    const completed = isModuleCompleted(module.name);
     const empty = count === 0;
     const started = picked > 0 && !completed;
     const statusText = empty ? "无作品" : completed ? "已完成" : started ? `已选 ${picked}/${module.voteLimit}` : "待投票";
@@ -593,6 +607,7 @@ function renderModules() {
         <span class="module-stats">${count} 作品</span>
         <span class="module-progress">${picked}/${module.voteLimit}</span>
         <span class="module-drop-text">拖入上传</span>
+        ${completed ? `<span class="module-complete-mark" aria-label="本模块已投票">已投</span>` : ""}
       </button>
     `;
   }).join("");
@@ -1026,8 +1041,14 @@ async function submitCurrentVote() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ voter, moduleName: submittedModuleName, entryIds })
     });
-    showToast(`${submittedModuleName} 已投完，正在整理下一项...`);
+    completedModules.add(submittedModuleName);
+    render();
     await loadData();
+    const completedVotableCount = modules
+      .filter(module => hasVotableEntries(module.name))
+      .filter(module => isModuleCompleted(module.name)).length;
+    const votableCount = modules.filter(module => hasVotableEntries(module.name)).length;
+    showToast(`${submittedModuleName} 已提交成功 · 已完成 ${completedVotableCount}/${votableCount}`, "success");
     goToNextPendingModule(submittedModuleName);
   } catch (error) {
     alert(error.message);
@@ -1040,14 +1061,14 @@ async function submitCurrentVote() {
 function goToNextPendingModule(submittedModuleName) {
   const nextModule = nextPendingModule(submittedModuleName);
   if (!nextModule) {
-    showToast("全部投票完成，感谢参与评优");
+    showToast("全部模块已投完，等待管理员公布结果", "success");
     welcomePanel.scrollIntoView({ behavior: "smooth", block: "start" });
     return;
   }
   window.setTimeout(() => {
     activeModule = nextModule;
     render();
-    showToast(`进入 ${nextModule.name}，继续投票`);
+    showToast(`已进入下一项：${nextModule.name}`);
     gallery.scrollIntoView({ behavior: "smooth", block: "start" });
   }, 1000);
 }
