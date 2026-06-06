@@ -989,21 +989,14 @@ async function uploadFiles(files, moduleName) {
   const batches = chunkArray(mediaFiles, UPLOAD_BATCH_SIZE);
   let uploadedFiles = 0;
   let totalMedia = 0;
+  const useDirectUpload = Boolean(systemInfo?.storage?.directUpload);
   setStatus(`正在上传到 ${moduleName}：共 ${mediaFiles.length} 个媒体文件，分 ${batches.length} 批处理...`);
   try {
     for (const [batchIndex, batch] of batches.entries()) {
       const batchNo = batchIndex + 1;
-      const formData = new FormData();
-      formData.append("moduleName", moduleName);
-      batch.forEach(file => {
-        const relativePath = file.relativePath || file.webkitRelativePath || file.name;
-        formData.append("files", file, relativePath);
-      });
-      setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batches.length} 批正在上传并生成展示版...`);
-      const result = await fetchJson("/api/upload", {
-        method: "POST",
-        body: formData
-      });
+      const result = useDirectUpload
+        ? await uploadBatchToObjectStorage(batch, moduleName, batchNo, batches.length)
+        : await uploadBatchToServer(batch, moduleName, batchNo, batches.length);
       uploadedFiles += batch.length;
       totalMedia += result.media || 0;
       setStatus(`正在上传到 ${moduleName}：已完成 ${uploadedFiles}/${mediaFiles.length} 个文件，继续处理...`);
@@ -1013,6 +1006,60 @@ async function uploadFiles(files, moduleName) {
   } catch (error) {
     setStatus(error.message);
   }
+}
+
+async function uploadBatchToServer(batch, moduleName, batchNo, batchCount) {
+  const formData = new FormData();
+  formData.append("moduleName", moduleName);
+  batch.forEach(file => {
+    const relativePath = file.relativePath || file.webkitRelativePath || file.name;
+    formData.append("files", file, relativePath);
+  });
+  setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batchCount} 批正在上传并生成展示版...`);
+  return fetchJson("/api/upload", {
+    method: "POST",
+    body: formData
+  });
+}
+
+async function uploadBatchToObjectStorage(batch, moduleName, batchNo, batchCount) {
+  const files = batch.map(file => ({
+    name: file.name,
+    relativePath: file.relativePath || file.webkitRelativePath || file.name,
+    type: file.type || "",
+    size: file.size || 0
+  }));
+  setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batchCount} 批准备直传对象存储...`);
+  const signed = await fetchJson("/api/storage/sign", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ moduleName, files })
+  });
+  const signedFiles = Array.isArray(signed.files) ? signed.files : [];
+  const uploaded = [];
+
+  for (const signedFile of signedFiles) {
+    const source = batch.find(file => {
+      const relativePath = file.relativePath || file.webkitRelativePath || file.name;
+      return relativePath === signedFile.relativePath;
+    }) || batch[uploaded.length];
+    if (!source) continue;
+    setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batchCount} 批直传 ${uploaded.length + 1}/${signedFiles.length}...`);
+    const response = await fetch(signedFile.uploadUrl, {
+      method: signedFile.method || "PUT",
+      headers: signedFile.contentType ? { "Content-Type": signedFile.contentType } : {},
+      body: source
+    });
+    if (!response.ok) throw new Error(`对象存储上传失败：${response.status}`);
+    uploaded.push(signedFile);
+  }
+
+  setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batchCount} 批写入作品列表...`);
+  return fetchJson("/api/storage/complete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ files: uploaded })
+  });
 }
 
 async function submitCurrentVote() {

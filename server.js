@@ -21,6 +21,13 @@ const IMAGE_OPTIMIZE_MIN_BYTES = Number(process.env.IMAGE_OPTIMIZE_MIN_MB || 4) 
 const IMAGE_MAX_DIMENSION = Number(process.env.IMAGE_MAX_DIMENSION || 2200);
 const VIDEO_PRESET = process.env.VIDEO_PRESET || "veryfast";
 const OPTIMIZE_CONCURRENCY = Math.max(1, Number(process.env.OPTIMIZE_CONCURRENCY || 1));
+const STORAGE_ENDPOINT = normalizeName(process.env.STORAGE_ENDPOINT);
+const STORAGE_BUCKET = normalizeName(process.env.STORAGE_BUCKET);
+const STORAGE_REGION = normalizeName(process.env.STORAGE_REGION || "auto");
+const STORAGE_ACCESS_KEY_ID = normalizeName(process.env.STORAGE_ACCESS_KEY_ID);
+const STORAGE_SECRET_ACCESS_KEY = normalizeName(process.env.STORAGE_SECRET_ACCESS_KEY);
+const STORAGE_PUBLIC_BASE_URL = normalizeName(process.env.STORAGE_PUBLIC_BASE_URL);
+const STORAGE_PREFIX = normalizeName(process.env.STORAGE_PREFIX || "photo-review");
 
 if (!ADMIN_CODE && process.env.NODE_ENV === "production") {
   console.error("ADMIN_CODE is required in production.");
@@ -307,6 +314,84 @@ function hash(input) {
   return crypto.createHash("sha1").update(input).digest("hex").slice(0, 16);
 }
 
+function hmac(key, value, encoding) {
+  return crypto.createHmac("sha256", key).update(value, "utf8").digest(encoding);
+}
+
+function sha256Hex(value) {
+  return crypto.createHash("sha256").update(value, "utf8").digest("hex");
+}
+
+function s3Date(date = new Date()) {
+  const iso = date.toISOString().replace(/[:-]|\.\d{3}/g, "");
+  return { amzDate: iso, dateStamp: iso.slice(0, 8) };
+}
+
+function s3SigningKey(dateStamp) {
+  const kDate = hmac(`AWS4${STORAGE_SECRET_ACCESS_KEY}`, dateStamp);
+  const kRegion = hmac(kDate, STORAGE_REGION);
+  const kService = hmac(kRegion, "s3");
+  return hmac(kService, "aws4_request");
+}
+
+function encodeS3PathSegment(value) {
+  return encodeURIComponent(value).replace(/[!'()*]/g, char => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
+function encodeS3Key(value) {
+  return String(value || "").split("/").map(encodeS3PathSegment).join("/");
+}
+
+function createStorageObjectKey(periodId, entryId, filename) {
+  return [STORAGE_PREFIX, periodId, entryId, filename]
+    .map(part => String(part || "").replace(/^\/+|\/+$/g, ""))
+    .filter(Boolean)
+    .join("/");
+}
+
+function publicStorageUrl(key) {
+  return `${STORAGE_PUBLIC_BASE_URL.replace(/\/+$/, "")}/${encodeS3Key(key)}`;
+}
+
+function createPresignedPutUrl(key, contentType) {
+  const endpoint = new URL(STORAGE_ENDPOINT);
+  const host = endpoint.host;
+  const canonicalUri = `/${encodeS3PathSegment(STORAGE_BUCKET)}/${encodeS3Key(key)}`;
+  const { amzDate, dateStamp } = s3Date();
+  const credentialScope = `${dateStamp}/${STORAGE_REGION}/s3/aws4_request`;
+  const credential = `${STORAGE_ACCESS_KEY_ID}/${credentialScope}`;
+  const params = new URLSearchParams({
+    "X-Amz-Algorithm": "AWS4-HMAC-SHA256",
+    "X-Amz-Credential": credential,
+    "X-Amz-Date": amzDate,
+    "X-Amz-Expires": "900",
+    "X-Amz-SignedHeaders": "host"
+  });
+  const canonicalQuery = [...params.entries()]
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .sort()
+    .join("&");
+  const canonicalRequest = [
+    "PUT",
+    canonicalUri,
+    canonicalQuery,
+    `host:${host}\n`,
+    "host",
+    "UNSIGNED-PAYLOAD"
+  ].join("\n");
+  const stringToSign = [
+    "AWS4-HMAC-SHA256",
+    amzDate,
+    credentialScope,
+    sha256Hex(canonicalRequest)
+  ].join("\n");
+  const signature = hmac(s3SigningKey(dateStamp), stringToSign, "hex");
+  params.set("X-Amz-Signature", signature);
+  const url = new URL(`${endpoint.origin}${canonicalUri}`);
+  url.search = params.toString();
+  return { url: url.toString(), contentType };
+}
+
 function parseSkuAndTitle(folderName) {
   const clean = normalizeName(folderName);
   const match = clean.match(/^([A-Za-z0-9][A-Za-z0-9_]{1,40})(?:[\s_-]+(.+))?$/);
@@ -321,6 +406,30 @@ function isExcludedUploadPath(relativePath) {
   return relativePath
     .split(/[\\/]+/)
     .some(part => EXCLUDED_UPLOAD_KEYWORDS.some(keyword => part.includes(keyword)));
+}
+
+function storageConfigured() {
+  return Boolean(STORAGE_ENDPOINT && STORAGE_BUCKET && STORAGE_ACCESS_KEY_ID && STORAGE_SECRET_ACCESS_KEY && STORAGE_PUBLIC_BASE_URL);
+}
+
+function normalizeUploadFile(file, fallbackModuleName, photographers, periodId, requireData) {
+  const relativePath = normalizeName(file.relativePath || file.name);
+  const ext = path.extname(relativePath).toLowerCase();
+  if (!MEDIA_TYPES.has(ext) || (requireData && !file.data && !file.buffer)) return null;
+  if (isExcludedUploadPath(relativePath)) return null;
+
+  const info = parseUploadPath(relativePath, fallbackModuleName);
+  const knownPhotographer = knownPhotographerName([info.photographer, info.workFolder, info.sku, info.title, relativePath], photographers);
+  if (knownPhotographer) info.photographer = knownPhotographer;
+  if (!knownPhotographer && !photographers.includes(info.photographer)) info.photographer = "鏈瘑鍒憚褰卞笀";
+
+  const expectedKind = MODULE_BY_NAME.get(info.moduleName)?.kind;
+  const mediaKind = IMAGE_TYPES.has(ext) ? "image" : VIDEO_TYPES.has(ext) ? "video" : "file";
+  if (!MODULE_BY_NAME.has(info.moduleName)) return null;
+  if (expectedKind && expectedKind !== mediaKind) return null;
+
+  const entryId = hash(`${periodId}|${info.moduleName}|${info.photographer}|${info.sku}|${info.title}`);
+  return { ...file, ...info, entryId, relativePath, ext, mediaKind };
 }
 
 function knownPhotographerName(values, photographers) {
@@ -686,9 +795,104 @@ async function handleUpload(req, res) {
     processedGroups.push({ ...group, id, periodId, media });
   }
 
+  await saveEntryMediaGroups(processedGroups);
+
+  for (const job of optimizeJobs) queueMediaOptimization(job);
+
+  sendJson(res, 200, { ok: true, entries: grouped.size, media: mediaTotal });
+}
+
+async function handleStorageSign(req, res) {
+  if (!storageConfigured()) return sendJson(res, 400, { error: "对象存储未配置，继续使用本地上传" });
+  const payload = await collectJson(req);
+  const fallbackModuleName = MODULE_BY_NAME.has(payload.moduleName) ? payload.moduleName : MODULES[0].name;
+  const files = Array.isArray(payload.files) ? payload.files : [];
+  const dbSnapshot = readDb();
+  const periodId = dbSnapshot.currentPeriodId;
+  const photographers = dbSnapshot.photographers || [];
+  const uploadNonce = crypto.randomBytes(6).toString("hex");
+  const signed = [];
+
+  if (files.length > MAX_FILES_PER_UPLOAD) {
+    return sendJson(res, 400, { error: `单次最多上传 ${MAX_FILES_PER_UPLOAD} 个文件` });
+  }
+
+  for (const [index, file] of files.entries()) {
+    const normalized = normalizeUploadFile(file, fallbackModuleName, photographers, periodId, false);
+    if (!normalized) continue;
+    const serial = String(index + 1).padStart(3, "0");
+    const filename = `${safeSegment(normalized.sku)}_${uploadNonce}_${serial}${normalized.ext}`;
+    const objectKey = createStorageObjectKey(periodId, normalized.entryId, filename);
+    const publicUrl = publicStorageUrl(objectKey);
+    const signedUrl = createPresignedPutUrl(objectKey, normalizeName(file.type) || contentTypeFor(filename));
+    signed.push({
+      id: hash(`${normalized.entryId}|${objectKey}`),
+      uploadUrl: signedUrl.url,
+      method: "PUT",
+      contentType: signedUrl.contentType,
+      publicUrl,
+      objectKey,
+      entryId: normalized.entryId,
+      periodId,
+      moduleId: normalized.moduleId,
+      moduleName: normalized.moduleName,
+      moduleKind: normalized.moduleKind,
+      photographer: normalized.photographer,
+      sku: normalized.sku,
+      title: normalized.title,
+      relativePath: normalized.relativePath,
+      kind: normalized.mediaKind,
+      name: file.name || path.basename(normalized.relativePath)
+    });
+  }
+
+  sendJson(res, 200, { ok: true, storage: "s3", files: signed });
+}
+
+async function handleStorageComplete(req, res) {
+  const payload = await collectJson(req);
+  const uploaded = Array.isArray(payload.files) ? payload.files : [];
+  const grouped = new Map();
+  let mediaTotal = 0;
+
+  for (const file of uploaded) {
+    if (!file.entryId || !file.publicUrl || !file.moduleName) continue;
+    const key = `${file.periodId}|${file.moduleName}|${file.photographer}|${file.sku}|${file.title}`;
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        id: file.entryId,
+        periodId: file.periodId || readDb().currentPeriodId,
+        moduleId: file.moduleId,
+        moduleName: file.moduleName,
+        moduleKind: file.moduleKind,
+        photographer: file.photographer,
+        sku: file.sku,
+        title: file.title,
+        media: []
+      });
+    }
+    grouped.get(key).media.push({
+      id: file.id || hash(`${file.entryId}|${file.publicUrl}`),
+      src: file.publicUrl,
+      originalSrc: file.publicUrl,
+      kind: file.kind,
+      name: file.name || path.basename(file.objectKey || file.publicUrl),
+      optimized: false,
+      processing: false,
+      storage: "object"
+    });
+    mediaTotal += 1;
+  }
+
+  const groups = [...grouped.values()];
+  await saveEntryMediaGroups(groups);
+  sendJson(res, 200, { ok: true, entries: groups.length, media: mediaTotal });
+}
+
+async function saveEntryMediaGroups(groups) {
   await withDbWriteLock(async () => {
     const db = readDb();
-    for (const group of processedGroups) {
+    for (const group of groups) {
       const existing = db.entries.find(entry => entry.id === group.id);
       const entry = existing || {
         id: group.id,
@@ -711,10 +915,6 @@ async function handleUpload(req, res) {
     db.entries.sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
     writeDb(db);
   });
-
-  for (const job of optimizeJobs) queueMediaOptimization(job);
-
-  sendJson(res, 200, { ok: true, entries: grouped.size, media: mediaTotal });
 }
 
 async function handleVote(req, res) {
@@ -899,6 +1099,10 @@ function handleApi(req, res) {
       uploadLimitMB: MAX_UPLOAD_MB,
       maxFilesPerUpload: MAX_FILES_PER_UPLOAD,
       optimizeQueue: optimizeQueueState(),
+      storage: {
+        directUpload: storageConfigured(),
+        provider: storageConfigured() ? "s3" : "local"
+      },
       optimization: {
         images: true,
         videos: HAS_FFMPEG,
@@ -950,6 +1154,16 @@ function handleApi(req, res) {
 
   if (req.method === "POST" && url.pathname === "/api/upload") {
     handleUpload(req, res).catch(error => sendJson(res, 400, { error: error.message }));
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/storage/sign") {
+    handleStorageSign(req, res).catch(error => sendJson(res, 400, { error: error.message }));
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/storage/complete") {
+    handleStorageComplete(req, res).catch(error => sendJson(res, 400, { error: error.message }));
     return;
   }
 
