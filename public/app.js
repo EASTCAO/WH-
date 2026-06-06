@@ -305,6 +305,7 @@ async function loadData() {
   const entryData = await fetchJson(`/api/entries${query}`);
   modules = entryData.modules;
   entries = entryData.entries;
+  syncOpenPreviewEntry();
   for (const module of modules) {
     if (!selected.has(module.name)) selected.set(module.name, new Set());
   }
@@ -322,6 +323,21 @@ async function loadData() {
 
 function hasProcessingMedia() {
   return entries.some(entry => (entry.media || []).some(item => item.processing));
+}
+
+function syncOpenPreviewEntry() {
+  if (!previewEntry) return;
+  const latestEntry = entries.find(entry => entry.id === previewEntry.id);
+  if (!latestEntry) {
+    previewEntry = null;
+    if (imageViewer.open) closeImageViewer();
+    if (previewDialog.open) closePreviewDialog();
+    return;
+  }
+  previewEntry = latestEntry;
+  if (viewerIndex >= previewEntry.media.length) viewerIndex = Math.max(0, previewEntry.media.length - 1);
+  if (previewDialog.open) renderPreviewContent();
+  if (imageViewer.open) renderImageViewer();
 }
 
 function scheduleProcessingRefresh() {
@@ -687,20 +703,25 @@ function renderGallery() {
 
 function openPreview(entry) {
   previewEntry = entry;
-  previewTitle.textContent = entryTitle(entry);
-  previewMeta.textContent = entryMeta(entry);
-  mediaPreviewGrid.innerHTML = entry.media.map((item, index) => `
+  renderPreviewContent();
+  previewDialog.showModal();
+}
+
+function renderPreviewContent() {
+  if (!previewEntry) return;
+  previewTitle.textContent = entryTitle(previewEntry);
+  previewMeta.textContent = entryMeta(previewEntry);
+  mediaPreviewGrid.innerHTML = previewEntry.media.map((item, index) => `
     <button class="media-preview-card${item.processing ? " processing" : ""}" type="button" data-index="${index}">
       ${item.kind === "video"
         ? `<video src="${item.src}" muted preload="metadata"></video>`
-        : `<img src="${item.src}" alt="${entryTitle(entry)} 第 ${index + 1} 张">`}
+        : `<img src="${item.src}" alt="${entryTitle(previewEntry)} 第 ${index + 1} 张">`}
       ${item.processing ? `<span class="media-processing">处理中</span>` : ""}
     </button>
   `).join("");
   mediaPreviewGrid.querySelectorAll(".media-preview-card").forEach(button => {
     button.addEventListener("click", () => openImageViewer(Number(button.dataset.index)));
   });
-  previewDialog.showModal();
 }
 
 function closePreviewDialog() {
