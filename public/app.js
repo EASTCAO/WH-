@@ -36,6 +36,8 @@ const selected = new Map();
 
 const THEME_KEY = "photoReviewTheme";
 const UPLOAD_BATCH_SIZE = 12;
+let uploadQueue = Promise.resolve();
+let uploadQueueLength = 0;
 const savedTheme = localStorage.getItem(THEME_KEY) || "light";
 document.body.dataset.theme = savedTheme === "dark" ? "dark" : "light";
 
@@ -605,7 +607,7 @@ function renderModules() {
         render();
         setStatus(`正在读取 ${targetModule.name} 的作品文件夹...`);
         const files = await collectDroppedFiles(event.dataTransfer);
-        await uploadFiles(files, targetModule.name);
+        enqueueUpload(files, targetModule.name);
       } catch (error) {
         setStatus(error.message || "读取拖拽文件夹失败");
       }
@@ -863,37 +865,6 @@ function toggleEntry(entry) {
   render();
 }
 
-function readFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve({
-      name: file.name,
-      relativePath: file.relativePath || file.webkitRelativePath || file.name,
-      type: file.type,
-      data: reader.result
-    });
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-async function mapLimit(items, limit, mapper, onProgress) {
-  const results = new Array(items.length);
-  let nextIndex = 0;
-  let done = 0;
-  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (nextIndex < items.length) {
-      const currentIndex = nextIndex;
-      nextIndex += 1;
-      results[currentIndex] = await mapper(items[currentIndex], currentIndex);
-      done += 1;
-      if (onProgress) onProgress(done, items.length);
-    }
-  });
-  await Promise.all(workers);
-  return results;
-}
-
 function chunkArray(items, size) {
   const chunks = [];
   for (let index = 0; index < items.length; index += size) {
@@ -949,6 +920,33 @@ async function collectDroppedFiles(dataTransfer) {
   return Array.from(dataTransfer.files || []);
 }
 
+function enqueueUpload(files, moduleName) {
+  const position = uploadQueueLength;
+  uploadQueueLength += 1;
+  if (position > 0) {
+    setStatus(`${moduleName} 已加入上传队列，前面还有 ${position} 个任务...`);
+  }
+
+  const task = uploadQueue
+    .then(async () => {
+      const targetModule = modules.find(module => module.name === moduleName);
+      if (targetModule) {
+        activeModule = targetModule;
+        render();
+      }
+      await uploadFiles(files, moduleName);
+    })
+    .catch(error => {
+      setStatus(error.message || "上传失败，请重试");
+    })
+    .finally(() => {
+      uploadQueueLength = Math.max(0, uploadQueueLength - 1);
+    });
+
+  uploadQueue = task.catch(() => {});
+  return task;
+}
+
 async function uploadFiles(files, moduleName) {
   const mediaFiles = files.filter(file => mediaPattern.test(file.name));
   if (!mediaFiles.length) {
@@ -962,14 +960,16 @@ async function uploadFiles(files, moduleName) {
   try {
     for (const [batchIndex, batch] of batches.entries()) {
       const batchNo = batchIndex + 1;
-      const payloadFiles = await mapLimit(batch, 4, readFile, done => {
-        setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batches.length} 批，已读取 ${uploadedFiles + done}/${mediaFiles.length} 个文件...`);
+      const formData = new FormData();
+      formData.append("moduleName", moduleName);
+      batch.forEach(file => {
+        const relativePath = file.relativePath || file.webkitRelativePath || file.name;
+        formData.append("files", file, relativePath);
       });
       setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batches.length} 批正在上传并生成展示版...`);
       const result = await fetchJson("/api/upload", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ moduleName, files: payloadFiles })
+        body: formData
       });
       uploadedFiles += batch.length;
       totalMedia += result.media || 0;

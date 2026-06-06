@@ -193,25 +193,93 @@ function sendText(res, status, text) {
   res.end(text);
 }
 
-function collectJson(req) {
+function collectRawBody(req) {
   return new Promise((resolve, reject) => {
-    let body = "";
+    const chunks = [];
+    let size = 0;
     req.on("data", chunk => {
-      body += chunk;
-      if (body.length > MAX_UPLOAD_BYTES) {
+      size += chunk.length;
+      if (size > MAX_UPLOAD_BYTES) {
         reject(new Error(`上传内容太大，单次限制约 ${MAX_UPLOAD_MB}MB`));
         req.destroy();
+        return;
       }
+      chunks.push(chunk);
     });
-    req.on("end", () => {
-      try {
-        resolve(body ? JSON.parse(body) : {});
-      } catch (error) {
-        reject(error);
-      }
-    });
+    req.on("end", () => resolve(Buffer.concat(chunks)));
     req.on("error", reject);
   });
+}
+
+async function collectJson(req) {
+  const body = await collectRawBody(req);
+  return body.length ? JSON.parse(body.toString("utf8")) : {};
+}
+
+function parsePartHeaders(text) {
+  const headers = {};
+  for (const line of text.split("\r\n")) {
+    const index = line.indexOf(":");
+    if (index < 0) continue;
+    headers[line.slice(0, index).trim().toLowerCase()] = line.slice(index + 1).trim();
+  }
+  return headers;
+}
+
+function parseContentDisposition(value) {
+  const result = {};
+  for (const part of String(value || "").split(";")) {
+    const [rawKey, ...rawValue] = part.trim().split("=");
+    if (!rawValue.length) continue;
+    const key = rawKey.trim().toLowerCase();
+    let value = rawValue.join("=").trim();
+    if (value.startsWith('"') && value.endsWith('"')) value = value.slice(1, -1);
+    result[key] = value.replace(/\\"/g, '"');
+  }
+  return result;
+}
+
+async function collectMultipart(req) {
+  const contentType = String(req.headers["content-type"] || "");
+  const match = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+  if (!match) throw new Error("上传格式不正确：缺少 boundary");
+  const boundary = Buffer.from(`--${match[1] || match[2]}`);
+  const body = await collectRawBody(req);
+  const fields = {};
+  const files = [];
+  let cursor = body.indexOf(boundary);
+
+  while (cursor >= 0) {
+    cursor += boundary.length;
+    if (body.slice(cursor, cursor + 2).toString() === "--") break;
+    if (body.slice(cursor, cursor + 2).toString() === "\r\n") cursor += 2;
+    const next = body.indexOf(boundary, cursor);
+    if (next < 0) break;
+    let part = body.slice(cursor, next);
+    if (part.slice(-2).toString() === "\r\n") part = part.slice(0, -2);
+    const headerEnd = part.indexOf(Buffer.from("\r\n\r\n"));
+    if (headerEnd >= 0) {
+      const headers = parsePartHeaders(part.slice(0, headerEnd).toString("utf8"));
+      const data = part.slice(headerEnd + 4);
+      const disposition = parseContentDisposition(headers["content-disposition"]);
+      if (disposition.name) {
+        if (Object.prototype.hasOwnProperty.call(disposition, "filename")) {
+          const relativePath = disposition.filename || "upload";
+          files.push({
+            name: path.basename(relativePath),
+            relativePath,
+            type: headers["content-type"] || "",
+            buffer: data
+          });
+        } else {
+          fields[disposition.name] = data.toString("utf8");
+        }
+      }
+    }
+    cursor = next;
+  }
+
+  return { fields, files };
 }
 
 function normalizeName(value) {
@@ -475,9 +543,13 @@ function handleStatic(req, res) {
 }
 
 async function handleUpload(req, res) {
-  const payload = await collectJson(req);
+  const contentType = String(req.headers["content-type"] || "");
+  const payload = contentType.includes("multipart/form-data")
+    ? await collectMultipart(req)
+    : await collectJson(req);
+  const fields = payload.fields || payload;
   const files = Array.isArray(payload.files) ? payload.files : [];
-  const fallbackModuleName = MODULE_BY_NAME.has(payload.moduleName) ? payload.moduleName : MODULES[0].name;
+  const fallbackModuleName = MODULE_BY_NAME.has(fields.moduleName) ? fields.moduleName : MODULES[0].name;
   const dbSnapshot = readDb();
   const periodId = dbSnapshot.currentPeriodId;
   const photographers = dbSnapshot.photographers || [];
@@ -490,7 +562,7 @@ async function handleUpload(req, res) {
   for (const file of files) {
     const relativePath = normalizeName(file.relativePath || file.name);
     const ext = path.extname(relativePath).toLowerCase();
-    if (!MEDIA_TYPES.has(ext) || !file.data) continue;
+    if (!MEDIA_TYPES.has(ext) || (!file.data && !file.buffer)) continue;
     if (isExcludedUploadPath(relativePath)) continue;
 
     const info = parseUploadPath(relativePath, fallbackModuleName);
@@ -518,7 +590,7 @@ async function handleUpload(req, res) {
     const media = [];
 
     for (const [index, file] of group.files.entries()) {
-      const buffer = Buffer.from(String(file.data).split(",").pop(), "base64");
+      const buffer = file.buffer || Buffer.from(String(file.data).split(",").pop(), "base64");
       const serial = String(mediaTotal + index + 1).padStart(3, "0");
       const filename = `${safeSegment(group.sku)}_${uploadNonce}_${serial}${file.ext}`;
       const originalFilename = `original_${filename}`;
