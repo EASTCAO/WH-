@@ -4337,3 +4337,32 @@ body[data-theme="dark"] #submitVote:disabled {
   color: rgba(213, 223, 196, 0.42) !important;
   box-shadow: none;
 }
+
+.entry-card {
+  grid-template-columns: 76px 1fr auto !important;
+}
+
+.entry-card .folder-icon {
+  width: 62px !important;
+  height: 52px !important;
+  border-radius: 10px !important;
+}
+
+.entry-card .folder-icon::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  z-index: -1;
+  border-radius: 14px;
+  background: rgba(255, 244, 218, 0.72);
+  border: 1px solid rgba(205, 151, 70, 0.22);
+  box-shadow: 0 12px 28px rgba(127, 83, 31, 0.16);
+}
+
+body[data-theme="dark"] .entry-card .folder-icon::after {
+  background: rgba(244, 197, 106, 0.18);
+  border-color: rgba(244, 197, 106, 0.34);
+  box-shadow:
+    0 0 0 1px rgba(244, 197, 106, 0.06),
+    0 16px 34px rgba(0, 0, 0, 0.38);
+}
