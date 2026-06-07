@@ -432,6 +432,15 @@ function normalizeUploadFile(file, fallbackModuleName, photographers, periodId, 
   return { ...file, ...info, entryId, relativePath, ext, mediaKind };
 }
 
+function resolveUploaderName(value, photographers) {
+  const uploaderName = normalizeName(value);
+  if (!uploaderName) return "";
+  if (!photographers.includes(uploaderName)) {
+    throw new Error("姓名不在摄影师名单中，请联系管理员添加");
+  }
+  return uploaderName;
+}
+
 function knownPhotographerName(values, photographers) {
   const list = Array.isArray(photographers) ? photographers.filter(Boolean) : [];
   const exact = list.find(name => values.some(value => normalizeName(value) === name));
@@ -727,6 +736,7 @@ async function handleUpload(req, res) {
   const dbSnapshot = readDb();
   const periodId = dbSnapshot.currentPeriodId;
   const photographers = dbSnapshot.photographers || [];
+  const uploaderName = resolveUploaderName(fields.uploaderName, photographers);
   const grouped = new Map();
 
   if (files.length > MAX_FILES_PER_UPLOAD) {
@@ -741,8 +751,9 @@ async function handleUpload(req, res) {
 
     const info = parseUploadPath(relativePath, fallbackModuleName);
     const knownPhotographer = knownPhotographerName([info.photographer, info.workFolder, info.sku, info.title, relativePath], photographers);
-    if (knownPhotographer) info.photographer = knownPhotographer;
-    if (!knownPhotographer && !photographers.includes(info.photographer)) info.photographer = "未识别摄影师";
+    if (uploaderName) info.photographer = uploaderName;
+    else if (knownPhotographer) info.photographer = knownPhotographer;
+    else if (!photographers.includes(info.photographer)) info.photographer = "未识别摄影师";
     const expectedKind = MODULE_BY_NAME.get(info.moduleName)?.kind;
     const mediaKind = IMAGE_TYPES.has(ext) ? "image" : VIDEO_TYPES.has(ext) ? "video" : "file";
     if (!MODULE_BY_NAME.has(info.moduleName)) continue;
@@ -810,6 +821,7 @@ async function handleStorageSign(req, res) {
   const dbSnapshot = readDb();
   const periodId = dbSnapshot.currentPeriodId;
   const photographers = dbSnapshot.photographers || [];
+  const uploaderName = resolveUploaderName(payload.uploaderName, photographers);
   const uploadNonce = crypto.randomBytes(6).toString("hex");
   const signed = [];
 
@@ -820,6 +832,10 @@ async function handleStorageSign(req, res) {
   for (const [index, file] of files.entries()) {
     const normalized = normalizeUploadFile(file, fallbackModuleName, photographers, periodId, false);
     if (!normalized) continue;
+    if (uploaderName) {
+      normalized.photographer = uploaderName;
+      normalized.entryId = hash(`${periodId}|${normalized.moduleName}|${normalized.photographer}|${normalized.sku}|${normalized.title}`);
+    }
     const serial = String(index + 1).padStart(3, "0");
     const filename = `${safeSegment(normalized.sku)}_${uploadNonce}_${serial}${normalized.ext}`;
     const objectKey = createStorageObjectKey(periodId, normalized.entryId, filename);
@@ -961,10 +977,21 @@ async function handleDeleteEntry(req, res) {
   const entryId = normalizeName(payload.entryId);
   const db = readDb();
   const entry = db.entries.find(item => item.id === entryId);
+  const adminRequest = isAdminPayload(payload);
+  const voterName = normalizeName(payload.voterName);
 
   if (!entry) return sendJson(res, 404, { error: "作品不存在" });
-  if (db.votingOpen && !isAdminPayload(payload)) {
+  if (db.votingOpen && !adminRequest) {
     return sendJson(res, 403, { error: "投票开始后只有管理员可以删除作品" });
+  }
+  if (!adminRequest) {
+    if (!voterName) return sendJson(res, 403, { error: "请先登录自己的姓名后再删除" });
+    if (!(db.photographers || []).includes(voterName)) {
+      return sendJson(res, 403, { error: "姓名不在摄影师名单中，请联系管理员添加" });
+    }
+    if (entry.photographer !== voterName) {
+      return sendJson(res, 403, { error: "只能删除自己上传的作品" });
+    }
   }
 
   db.entries = db.entries.filter(item => item.id !== entryId);

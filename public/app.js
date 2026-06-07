@@ -182,6 +182,12 @@ function hasVotableEntries(moduleName) {
   return moduleEntries(moduleName).length > 0;
 }
 
+function myUploadedEntries(moduleName) {
+  const voter = voterName();
+  if (!voter) return [];
+  return moduleEntries(moduleName).filter(entry => entry.photographer === voter);
+}
+
 function isModuleCompleted(moduleName) {
   return completedModules.has(moduleName);
 }
@@ -607,6 +613,7 @@ function renderModules() {
 
   moduleGrid.innerHTML = modules.map((module, index) => {
     const count = moduleEntries(module.name).length;
+    const myUploadCount = myUploadedEntries(module.name).length;
     const picked = selected.get(module.name)?.size || 0;
     const completed = isModuleCompleted(module.name);
     const empty = count === 0;
@@ -626,6 +633,7 @@ function renderModules() {
           </span>
         </span>
         <span class="module-stats">${count} 作品</span>
+        ${myUploadCount ? `<span class="module-uploaded">已上传 ${myUploadCount} 套</span>` : ""}
         <span class="module-progress">${picked}/${module.voteLimit}</span>
         <span class="module-drop-text">拖入上传</span>
         ${completed ? `<span class="module-complete-mark" aria-label="本模块已投票">已投</span>` : ""}
@@ -656,6 +664,11 @@ function renderModules() {
     button.addEventListener("drop", async event => {
       const targetModule = modules.find(module => module.name === button.dataset.module);
       try {
+        if (!adminMode && !voterName()) {
+          setStatus("请先登录自己的姓名后再上传");
+          authName?.focus();
+          return;
+        }
         activeModule = targetModule;
         render();
         setStatus(`正在读取 ${targetModule.name} 的作品文件夹...`);
@@ -696,7 +709,8 @@ function renderGallery() {
       toggleEntry(entry);
     });
     const deleteButton = node.querySelector(".delete-entry");
-    deleteButton.hidden = votingOpen && !adminMode;
+    const canDelete = adminMode || (!votingOpen && Boolean(isOwn));
+    deleteButton.hidden = !canDelete;
     deleteButton.addEventListener("click", event => {
       event.stopPropagation();
       deleteEntry(entry);
@@ -798,7 +812,11 @@ async function deleteEntry(entry) {
     await fetchJson("/api/delete-entry", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ entryId: entry.id, adminCode: adminMode ? adminCode.value.trim() : "" })
+      body: JSON.stringify({
+        entryId: entry.id,
+        adminCode: adminMode ? adminCode.value.trim() : "",
+        voterName: adminMode ? "" : voterName()
+      })
     });
     activeBucket().delete(entry.id);
     await loadData();
@@ -1007,6 +1025,10 @@ function enqueueUpload(files, moduleName) {
 }
 
 async function uploadFiles(files, moduleName) {
+  if (!adminMode && !voterName()) {
+    setStatus("请先登录自己的姓名后再上传");
+    return;
+  }
   const mediaFiles = files.filter(file => mediaPattern.test(file.name));
   if (!mediaFiles.length) {
     setStatus("文件夹里没有可识别的图片或视频");
@@ -1027,7 +1049,9 @@ async function uploadFiles(files, moduleName) {
       totalMedia += result.media || 0;
       setStatus(`正在上传到 ${moduleName}：已完成 ${uploadedFiles}/${mediaFiles.length} 个文件，继续处理...`);
     }
+    const uploadOwner = adminMode ? "管理员" : voterName();
     setStatus(`${moduleName} 上传完成：已处理 ${totalMedia} 个媒体文件，作品列表已刷新。`);
+    showToast(`${moduleName} 上传成功，已记录为 ${uploadOwner} 的作品`, "success");
     await loadData();
   } catch (error) {
     setStatus(error.message);
@@ -1037,6 +1061,7 @@ async function uploadFiles(files, moduleName) {
 async function uploadBatchToServer(batch, moduleName, batchNo, batchCount) {
   const formData = new FormData();
   formData.append("moduleName", moduleName);
+  if (!adminMode) formData.append("uploaderName", voterName());
   batch.forEach(file => {
     const relativePath = file.relativePath || file.webkitRelativePath || file.name;
     formData.append("files", file, relativePath);
@@ -1067,7 +1092,7 @@ async function uploadBatchToObjectStorage(batch, moduleName, batchNo, batchCount
   const signed = await fetchJson("/api/storage/sign", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ moduleName, files })
+    body: JSON.stringify({ moduleName, files, uploaderName: adminMode ? "" : voterName() })
   });
   const signedFiles = Array.isArray(signed.files) ? signed.files : [];
   const uploaded = [];

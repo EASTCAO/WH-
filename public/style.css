@@ -676,6 +676,18 @@ button:disabled {
   font-weight: 700;
 }
 
+.module-uploaded {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f3fbf8;
+  color: #136c57;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .module-drop-text {
   width: 100%;
   margin-top: 6px;
@@ -4225,4 +4237,16 @@ body[data-theme="dark"] .vote-toolbar.is-completed {
 body[data-theme="dark"] .vote-toolbar.is-completed strong::after {
   background: #d5dfc4;
   color: #182016;
+}
+
+.module-uploaded {
+  border: 1px solid rgba(29, 111, 97, 0.18);
+  background: rgba(29, 111, 97, 0.08) !important;
+  color: #136c57 !important;
+}
+
+body[data-theme="dark"] .module-uploaded {
+  border-color: rgba(213, 223, 196, 0.24);
+  background: rgba(213, 223, 196, 0.10) !important;
+  color: #d5dfc4 !important;
 }
