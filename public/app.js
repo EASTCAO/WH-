@@ -37,6 +37,10 @@ const selected = new Map();
 const THEME_KEY = "photoReviewTheme";
 const UPLOAD_BATCH_SIZE = 12;
 const OBJECT_UPLOAD_CONCURRENCY = 4;
+const CLIENT_IMAGE_OPTIMIZE_MIN_BYTES = 1.5 * 1024 * 1024;
+const CLIENT_IMAGE_MAX_DIMENSION = 2400;
+const CLIENT_IMAGE_QUALITY = 0.86;
+const CLIENT_OPTIMIZABLE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 let uploadQueue = Promise.resolve();
 let uploadQueueLength = 0;
 let processingRefreshTimer = null;
@@ -1045,7 +1049,15 @@ async function uploadBatchToServer(batch, moduleName, batchNo, batchCount) {
 }
 
 async function uploadBatchToObjectStorage(batch, moduleName, batchNo, batchCount) {
-  const files = batch.map(file => ({
+  setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batchCount} 批压缩图片...`);
+  const uploadBatch = await Promise.all(batch.map(prepareDirectUploadFile));
+  const compressedCount = uploadBatch.filter(file => file.optimizedForUpload).length;
+  const savedBytes = uploadBatch.reduce((sum, file) => sum + (file.uploadSavedBytes || 0), 0);
+  if (compressedCount) {
+    setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batchCount} 批已压缩 ${compressedCount} 张，减少 ${formatFileSize(savedBytes)}...`);
+  }
+
+  const files = uploadBatch.map(file => ({
     name: file.name,
     relativePath: file.relativePath || file.webkitRelativePath || file.name,
     type: file.type || "",
@@ -1062,7 +1074,7 @@ async function uploadBatchToObjectStorage(batch, moduleName, batchNo, batchCount
   let completed = 0;
 
   await runLimited(signedFiles, OBJECT_UPLOAD_CONCURRENCY, async (signedFile, index) => {
-    const source = findSignedSourceFile(batch, signedFile) || batch[index];
+    const source = findSignedSourceFile(uploadBatch, signedFile) || uploadBatch[index];
     if (!source) return;
     const response = await fetch(signedFile.uploadUrl, {
       method: signedFile.method || "PUT",
@@ -1088,6 +1100,70 @@ function findSignedSourceFile(batch, signedFile) {
     const relativePath = file.relativePath || file.webkitRelativePath || file.name;
     return relativePath === signedFile.relativePath;
   });
+}
+
+async function prepareDirectUploadFile(file) {
+  const relativePath = file.relativePath || file.webkitRelativePath || file.name;
+  file.relativePath = relativePath;
+  if (!shouldOptimizeUploadImage(file)) return file;
+
+  try {
+    const compressed = await compressImageForUpload(file);
+    if (!compressed || compressed.size >= file.size) return file;
+    const optimizedName = file.name.replace(/\.[^.]+$/, ".webp");
+    const optimizedRelativePath = relativePath.replace(/\.[^.]+$/, ".webp");
+    const optimizedFile = new File([compressed], optimizedName, {
+      type: "image/webp",
+      lastModified: file.lastModified
+    });
+    optimizedFile.relativePath = optimizedRelativePath;
+    optimizedFile.uploadSavedBytes = file.size - optimizedFile.size;
+    optimizedFile.optimizedForUpload = true;
+    return optimizedFile;
+  } catch {
+    return file;
+  }
+}
+
+function shouldOptimizeUploadImage(file) {
+  return file.size >= CLIENT_IMAGE_OPTIMIZE_MIN_BYTES && CLIENT_OPTIMIZABLE_IMAGE_TYPES.has(file.type);
+}
+
+async function compressImageForUpload(file) {
+  const image = await loadImageElement(file);
+  const scale = Math.min(1, CLIENT_IMAGE_MAX_DIMENSION / Math.max(image.naturalWidth, image.naturalHeight));
+  const width = Math.max(1, Math.round(image.naturalWidth * scale));
+  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d", { alpha: false });
+  context.drawImage(image, 0, 0, width, height);
+  return new Promise(resolve => {
+    canvas.toBlob(resolve, "image/webp", CLIENT_IMAGE_QUALITY);
+  });
+}
+
+function loadImageElement(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("图片压缩失败"));
+    };
+    image.src = url;
+  });
+}
+
+function formatFileSize(bytes) {
+  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)}KB`;
+  return `${Math.max(0, Math.round(bytes))}B`;
 }
 
 async function runLimited(items, limit, worker) {
