@@ -36,6 +36,7 @@ const selected = new Map();
 
 const THEME_KEY = "photoReviewTheme";
 const UPLOAD_BATCH_SIZE = 12;
+const OBJECT_UPLOAD_CONCURRENCY = 4;
 let uploadQueue = Promise.resolve();
 let uploadQueueLength = 0;
 let processingRefreshTimer = null;
@@ -1058,14 +1059,11 @@ async function uploadBatchToObjectStorage(batch, moduleName, batchNo, batchCount
   });
   const signedFiles = Array.isArray(signed.files) ? signed.files : [];
   const uploaded = [];
+  let completed = 0;
 
-  for (const signedFile of signedFiles) {
-    const source = batch.find(file => {
-      const relativePath = file.relativePath || file.webkitRelativePath || file.name;
-      return relativePath === signedFile.relativePath;
-    }) || batch[uploaded.length];
-    if (!source) continue;
-    setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batchCount} 批直传 ${uploaded.length + 1}/${signedFiles.length}...`);
+  await runLimited(signedFiles, OBJECT_UPLOAD_CONCURRENCY, async (signedFile, index) => {
+    const source = findSignedSourceFile(batch, signedFile) || batch[index];
+    if (!source) return;
     const response = await fetch(signedFile.uploadUrl, {
       method: signedFile.method || "PUT",
       headers: signedFile.contentType ? { "Content-Type": signedFile.contentType } : {},
@@ -1073,7 +1071,9 @@ async function uploadBatchToObjectStorage(batch, moduleName, batchNo, batchCount
     });
     if (!response.ok) throw new Error(`对象存储上传失败：${response.status}`);
     uploaded.push(signedFile);
-  }
+    completed += 1;
+    setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batchCount} 批直传 ${completed}/${signedFiles.length}...`);
+  });
 
   setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batchCount} 批写入作品列表...`);
   return fetchJson("/api/storage/complete", {
@@ -1081,6 +1081,24 @@ async function uploadBatchToObjectStorage(batch, moduleName, batchNo, batchCount
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ files: uploaded })
   });
+}
+
+function findSignedSourceFile(batch, signedFile) {
+  return batch.find(file => {
+    const relativePath = file.relativePath || file.webkitRelativePath || file.name;
+    return relativePath === signedFile.relativePath;
+  });
+}
+
+async function runLimited(items, limit, worker) {
+  const queue = [...items.entries()];
+  const workers = Array.from({ length: Math.min(limit, queue.length) }, async () => {
+    while (queue.length) {
+      const [index, item] = queue.shift();
+      await worker(item, index);
+    }
+  });
+  await Promise.all(workers);
 }
 
 async function submitCurrentVote() {
