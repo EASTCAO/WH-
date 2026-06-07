@@ -185,7 +185,7 @@ function hasVotableEntries(moduleName) {
 function myUploadedEntries(moduleName) {
   const voter = voterName();
   if (!voter) return [];
-  return moduleEntries(moduleName).filter(entry => entry.photographer === voter);
+  return moduleEntries(moduleName).filter(entry => entry.isOwn || entry.photographer === voter);
 }
 
 function isModuleCompleted(moduleName) {
@@ -312,7 +312,9 @@ async function loadData() {
   } else {
     photographers = [];
   }
-  const query = adminMode ? `?adminCode=${encodeURIComponent(adminCode.value.trim())}` : "";
+  const query = adminMode
+    ? `?adminCode=${encodeURIComponent(adminCode.value.trim())}`
+    : (voterName() ? `?voterName=${encodeURIComponent(voterName())}` : "");
   const entryData = await fetchJson(`/api/entries${query}`);
   modules = entryData.modules;
   entries = entryData.entries;
@@ -696,7 +698,7 @@ function renderGallery() {
 
   for (const entry of list) {
     const node = entryTemplate.content.firstElementChild.cloneNode(true);
-    const isOwn = voter && entry.photographer === voter;
+    const isOwn = Boolean(entry.isOwn || (voter && entry.photographer === voter));
     const isSelected = activeBucket().has(entry.id);
     node.classList.toggle("selected", isSelected);
     node.classList.toggle("disabled", Boolean(isOwn));

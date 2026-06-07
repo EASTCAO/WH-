@@ -528,7 +528,7 @@ function voterMedia(entry) {
   }));
 }
 
-function voterEntry(entry) {
+function voterEntry(entry, viewerName = "") {
   const media = voterMedia(entry);
   return {
     id: entry.id,
@@ -536,6 +536,7 @@ function voterEntry(entry) {
     moduleName: entry.moduleName || entry.board,
     moduleKind: entry.moduleKind || "image",
     sku: entry.sku,
+    isOwn: Boolean(viewerName && entry.photographer === viewerName),
     sequence: entry.sequence || 0,
     mediaCount: media.length,
     imageCount: media.filter(item => item.kind === "image").length,
@@ -1147,7 +1148,8 @@ function handleApi(req, res) {
   }
 
   if (req.method === "GET" && url.pathname === "/api/entries") {
-    const view = canViewAdmin(url) ? publicEntry : voterEntry;
+    const viewerName = normalizeName(url.searchParams.get("voterName"));
+    const view = canViewAdmin(url) ? publicEntry : entry => voterEntry(entry, viewerName);
     const entries = currentEntries(db).map(view).sort((a, b) => a.sequence - b.sequence);
     sendJson(res, 200, { modules: MODULES, entries });
     return;
