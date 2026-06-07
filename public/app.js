@@ -1031,6 +1031,11 @@ async function uploadFiles(files, moduleName) {
     setStatus("请先登录自己的姓名后再上传");
     return;
   }
+  if (!adminMode && myUploadedEntries(moduleName).length) {
+    setStatus(`${moduleName} 已经上传过作品，如需重新上传，请先删除之前上传的作品`);
+    showToast(`${moduleName} 已上传过，请先删除原作品再上传`, "error");
+    return;
+  }
   const mediaFiles = files.filter(file => mediaPattern.test(file.name));
   if (!mediaFiles.length) {
     setStatus("文件夹里没有可识别的图片或视频");
@@ -1039,14 +1044,15 @@ async function uploadFiles(files, moduleName) {
   const batches = chunkArray(mediaFiles, UPLOAD_BATCH_SIZE);
   let uploadedFiles = 0;
   let totalMedia = 0;
+  const uploadSessionId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const useDirectUpload = Boolean(systemInfo?.storage?.directUpload);
   setStatus(`正在上传到 ${moduleName}：共 ${mediaFiles.length} 个媒体文件，分 ${batches.length} 批处理...`);
   try {
     for (const [batchIndex, batch] of batches.entries()) {
       const batchNo = batchIndex + 1;
       const result = useDirectUpload
-        ? await uploadBatchToObjectStorage(batch, moduleName, batchNo, batches.length)
-        : await uploadBatchToServer(batch, moduleName, batchNo, batches.length);
+        ? await uploadBatchToObjectStorage(batch, moduleName, batchNo, batches.length, uploadSessionId)
+        : await uploadBatchToServer(batch, moduleName, batchNo, batches.length, uploadSessionId);
       uploadedFiles += batch.length;
       totalMedia += result.media || 0;
       setStatus(`正在上传到 ${moduleName}：已完成 ${uploadedFiles}/${mediaFiles.length} 个文件，继续处理...`);
@@ -1060,9 +1066,10 @@ async function uploadFiles(files, moduleName) {
   }
 }
 
-async function uploadBatchToServer(batch, moduleName, batchNo, batchCount) {
+async function uploadBatchToServer(batch, moduleName, batchNo, batchCount, uploadSessionId) {
   const formData = new FormData();
   formData.append("moduleName", moduleName);
+  formData.append("uploadSessionId", uploadSessionId);
   if (!adminMode) formData.append("uploaderName", voterName());
   batch.forEach(file => {
     const relativePath = file.relativePath || file.webkitRelativePath || file.name;
@@ -1075,7 +1082,7 @@ async function uploadBatchToServer(batch, moduleName, batchNo, batchCount) {
   });
 }
 
-async function uploadBatchToObjectStorage(batch, moduleName, batchNo, batchCount) {
+async function uploadBatchToObjectStorage(batch, moduleName, batchNo, batchCount, uploadSessionId) {
   setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batchCount} 批压缩图片...`);
   const uploadBatch = await Promise.all(batch.map(prepareDirectUploadFile));
   const compressedCount = uploadBatch.filter(file => file.optimizedForUpload).length;
@@ -1094,7 +1101,7 @@ async function uploadBatchToObjectStorage(batch, moduleName, batchNo, batchCount
   const signed = await fetchJson("/api/storage/sign", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ moduleName, files, uploaderName: adminMode ? "" : voterName() })
+    body: JSON.stringify({ moduleName, files, uploadSessionId, uploaderName: adminMode ? "" : voterName() })
   });
   const signedFiles = Array.isArray(signed.files) ? signed.files : [];
   const uploaded = [];

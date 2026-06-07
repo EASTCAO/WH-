@@ -152,6 +152,21 @@ function currentEntries(db) {
   return (db.entries || []).filter(entry => (entry.periodId || db.currentPeriodId) === db.currentPeriodId);
 }
 
+function hasUploaderModuleEntry(db, uploaderName, moduleName, allowedEntryId = "") {
+  if (!uploaderName || !moduleName) return false;
+  return currentEntries(db).some(entry =>
+    entry.photographer === uploaderName &&
+    entry.moduleName === moduleName &&
+    (!allowedEntryId || entry.id !== allowedEntryId)
+  );
+}
+
+function assertUploaderCanCreateModuleEntry(db, uploaderName, moduleName, allowedEntryId = "") {
+  if (hasUploaderModuleEntry(db, uploaderName, moduleName, allowedEntryId)) {
+    throw new Error(`${moduleName} 已经上传过作品，如需重新上传，请先删除之前上传的作品`);
+  }
+}
+
 function currentBallots(db) {
   return (db.ballots || []).filter(ballot => (ballot.periodId || db.currentPeriodId) === db.currentPeriodId);
 }
@@ -734,6 +749,7 @@ async function handleUpload(req, res) {
   const fields = payload.fields || payload;
   const files = Array.isArray(payload.files) ? payload.files : [];
   const fallbackModuleName = MODULE_BY_NAME.has(fields.moduleName) ? fields.moduleName : MODULES[0].name;
+  const uploadSessionId = normalizeName(fields.uploadSessionId);
   const dbSnapshot = readDb();
   const periodId = dbSnapshot.currentPeriodId;
   const photographers = dbSnapshot.photographers || [];
@@ -760,7 +776,11 @@ async function handleUpload(req, res) {
     if (!MODULE_BY_NAME.has(info.moduleName)) continue;
     if (expectedKind && expectedKind !== mediaKind) continue;
 
-    const key = `${periodId}|${info.moduleName}|${info.photographer}|${info.sku}|${info.title}`;
+    const entryId = uploadSessionId && uploaderName
+      ? hash(`${periodId}|${info.moduleName}|${info.photographer}|${uploadSessionId}`)
+      : hash(`${periodId}|${info.moduleName}|${info.photographer}|${info.sku}|${info.title}`);
+    if (uploaderName) assertUploaderCanCreateModuleEntry(dbSnapshot, uploaderName, info.moduleName, entryId);
+    const key = `${periodId}|${info.moduleName}|${info.photographer}|${entryId}`;
     if (!grouped.has(key)) grouped.set(key, { ...info, files: [] });
     grouped.get(key).files.push({ ...file, relativePath, ext, mediaKind });
   }
@@ -771,7 +791,9 @@ async function handleUpload(req, res) {
   const optimizeJobs = [];
 
   for (const group of grouped.values()) {
-    const id = hash(`${periodId}|${group.moduleName}|${group.photographer}|${group.sku}|${group.title}`);
+    const id = uploadSessionId && uploaderName
+      ? hash(`${periodId}|${group.moduleName}|${group.photographer}|${uploadSessionId}`)
+      : hash(`${periodId}|${group.moduleName}|${group.photographer}|${group.sku}|${group.title}`);
     const entryDir = path.join(UPLOAD_DIR, id);
     fs.mkdirSync(entryDir, { recursive: true });
     const media = [];
@@ -819,6 +841,7 @@ async function handleStorageSign(req, res) {
   const payload = await collectJson(req);
   const fallbackModuleName = MODULE_BY_NAME.has(payload.moduleName) ? payload.moduleName : MODULES[0].name;
   const files = Array.isArray(payload.files) ? payload.files : [];
+  const uploadSessionId = normalizeName(payload.uploadSessionId);
   const dbSnapshot = readDb();
   const periodId = dbSnapshot.currentPeriodId;
   const photographers = dbSnapshot.photographers || [];
@@ -835,8 +858,11 @@ async function handleStorageSign(req, res) {
     if (!normalized) continue;
     if (uploaderName) {
       normalized.photographer = uploaderName;
-      normalized.entryId = hash(`${periodId}|${normalized.moduleName}|${normalized.photographer}|${normalized.sku}|${normalized.title}`);
+      normalized.entryId = uploadSessionId
+        ? hash(`${periodId}|${normalized.moduleName}|${normalized.photographer}|${uploadSessionId}`)
+        : hash(`${periodId}|${normalized.moduleName}|${normalized.photographer}|${normalized.sku}|${normalized.title}`);
     }
+    if (uploaderName) assertUploaderCanCreateModuleEntry(dbSnapshot, uploaderName, normalized.moduleName, normalized.entryId);
     const serial = String(index + 1).padStart(3, "0");
     const filename = `${safeSegment(normalized.sku)}_${uploadNonce}_${serial}${normalized.ext}`;
     const objectKey = createStorageObjectKey(periodId, normalized.entryId, filename);
@@ -871,9 +897,16 @@ async function handleStorageComplete(req, res) {
   const uploaded = Array.isArray(payload.files) ? payload.files : [];
   const grouped = new Map();
   let mediaTotal = 0;
+  const dbSnapshot = readDb();
+  const seenUploaderModules = new Set();
 
   for (const file of uploaded) {
     if (!file.entryId || !file.publicUrl || !file.moduleName) continue;
+    const ownerModuleKey = `${file.photographer}|${file.moduleName}`;
+    if (file.photographer && file.moduleName && !seenUploaderModules.has(ownerModuleKey)) {
+      assertUploaderCanCreateModuleEntry(dbSnapshot, file.photographer, file.moduleName, file.entryId);
+      seenUploaderModules.add(ownerModuleKey);
+    }
     const key = `${file.periodId}|${file.moduleName}|${file.photographer}|${file.sku}|${file.title}`;
     if (!grouped.has(key)) {
       grouped.set(key, {
