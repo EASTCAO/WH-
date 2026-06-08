@@ -1387,8 +1387,6 @@ statusToggle.addEventListener("click", async () => {
   if (!adminMode) return;
   if (!(await ensureSelectedPeriodActive())) return;
   const next = !votingOpen;
-  const message = next ? "确定开始投票吗？开始后普通用户不能删除作品。" : "确定恢复上传阶段吗？恢复后普通用户可以删除误传作品。";
-  if (!confirm(message)) return;
   try {
     await fetchJson("/api/status", {
       method: "POST",
@@ -1396,6 +1394,7 @@ statusToggle.addEventListener("click", async () => {
       body: JSON.stringify({ adminCode: adminCode.value.trim(), votingOpen: next })
     });
     await loadData();
+    showToast(next ? "已开始投票" : "已恢复上传阶段");
   } catch (error) {
     alert(error.message);
   }
