@@ -1335,6 +1335,43 @@ async function handleStorageComplete(req, res) {
   sendJson(res, 200, { ok: true, entries: groups.length, media: mediaTotal });
 }
 
+async function handleAdminRestoreDb(req, res) {
+  const payload = await collectJson(req);
+  if (!isAdminPayload(payload)) return sendJson(res, 403, { error: "管理员口令不正确" });
+  const source = payload.db && typeof payload.db === "object" ? payload.db : null;
+  if (!source) return sendJson(res, 400, { error: "缺少恢复数据" });
+
+  const db = emptyDb();
+  db.entries = Array.isArray(source.entries) ? source.entries : [];
+  db.ballots = Array.isArray(source.ballots) ? source.ballots : [];
+  db.tiebreakers = Array.isArray(source.tiebreakers) ? source.tiebreakers : [];
+  db.tiebreakerBallots = Array.isArray(source.tiebreakerBallots) ? source.tiebreakerBallots : [];
+  db.photographers = Array.isArray(source.photographers) ? [...new Set(source.photographers.map(normalizeName).filter(Boolean))] : [];
+  db.periods = Array.isArray(source.periods) && source.periods.length ? source.periods.map(period => createPeriod(period.id, period)) : [];
+  db.currentPeriodId = normalizeName(source.currentPeriodId) || db.periods[0]?.id || currentPeriodId();
+  db.nextSequence = Number(source.nextSequence) || db.entries.length + 1;
+
+  if (!db.periods.some(period => period.id === db.currentPeriodId)) {
+    db.periods.push(createPeriod(db.currentPeriodId, {
+      votingOpen: source.votingOpen,
+      resultsPublished: source.resultsPublished
+    }));
+  }
+  const period = db.periods.find(item => item.id === db.currentPeriodId);
+  period.votingOpen = Boolean(source.votingOpen);
+  period.resultsPublished = Boolean(source.resultsPublished);
+  ensurePeriods(db);
+  writeDb(db);
+  sendJson(res, 200, {
+    ok: true,
+    entries: currentEntries(db).length,
+    media: currentEntries(db).reduce((total, entry) => total + (entry.media || []).length, 0),
+    currentPeriodId: db.currentPeriodId,
+    votingOpen: db.votingOpen,
+    resultsPublished: db.resultsPublished
+  });
+}
+
 async function handleVideoOptimize(req, res) {
   const payload = await collectJson(req);
   if (!isAdminPayload(payload)) return sendJson(res, 403, { error: "管理员口令不正确" });
@@ -1835,6 +1872,11 @@ function handleApi(req, res) {
 
   if (req.method === "POST" && url.pathname === "/api/storage/complete") {
     handleStorageComplete(req, res).catch(error => sendJson(res, 400, { error: error.message }));
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/admin/restore-db") {
+    handleAdminRestoreDb(req, res).catch(error => sendJson(res, 400, { error: error.message }));
     return;
   }
 
