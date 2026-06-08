@@ -326,6 +326,50 @@ main {
   width: min(260px, 100%);
 }
 
+.optimize-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 12px 14px;
+  border: 1px solid #d8e3f3;
+  border-radius: 8px;
+  background: #f7fbff;
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.optimize-status strong {
+  font-size: 15px;
+}
+
+.optimize-status span:last-child {
+  color: #667085;
+}
+
+.optimize-dot {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #2f6fed;
+  box-shadow: 0 0 0 5px rgba(47, 111, 237, 0.12);
+}
+
+.optimize-status.is-working .optimize-dot {
+  animation: phasePulse 1.4s ease-in-out infinite;
+}
+
+.optimize-status.is-complete {
+  border-color: #cdebd8;
+  background: #f5fcf7;
+}
+
+.optimize-status.is-complete .optimize-dot {
+  background: #12b76a;
+  box-shadow: 0 0 0 5px rgba(18, 183, 106, 0.12);
+}
+
 .photographer-admin {
   display: block;
   padding: 14px;

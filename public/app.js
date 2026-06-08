@@ -82,6 +82,7 @@ const statusToggle = document.querySelector("#statusToggle");
 const publishToggle = document.querySelector("#publishToggle");
 const downloadArchive = document.querySelector("#downloadArchive");
 const clearCurrentPeriod = document.querySelector("#clearCurrentPeriod");
+const optimizeStatus = document.querySelector("#optimizeStatus");
 const adminPanel = document.querySelector("#adminPanel");
 const photographerName = document.querySelector("#photographerName");
 const addPhotographer = document.querySelector("#addPhotographer");
@@ -578,6 +579,7 @@ function render() {
   activeModuleTitle.textContent = activeModule.name;
   updateSelectedCount();
   renderStatusControls();
+  renderOptimizeStatus();
   renderPeriodAdmin();
   renderPhotographerAdmin();
   renderBallotAdmin();
@@ -641,6 +643,30 @@ function renderStatusControls() {
   submitVote.textContent = isSubmittingVote
     ? "提交中..."
     : activeCompleted ? "重新提交本模块" : "提交本模块投票";
+}
+
+function renderOptimizeStatus() {
+  if (!optimizeStatus) return;
+  optimizeStatus.hidden = !adminMode;
+  if (!adminMode) return;
+
+  const queue = systemInfo?.optimizeQueue || {};
+  const pending = Number(queue.pending || 0);
+  const active = Number(queue.active || 0);
+  const total = pending + active;
+  optimizeStatus.classList.toggle("is-complete", total === 0);
+  optimizeStatus.classList.toggle("is-working", total > 0);
+  optimizeStatus.innerHTML = total > 0
+    ? `
+      <span class="optimize-dot" aria-hidden="true"></span>
+      <strong>展示版处理中</strong>
+      <span>正在处理 ${active} 个，还剩 ${pending} 个</span>
+    `
+    : `
+      <span class="optimize-dot" aria-hidden="true"></span>
+      <strong>全部处理完成</strong>
+      <span>可以通知摄影师开始查看和投票</span>
+    `;
 }
 
 function renderModules() {
