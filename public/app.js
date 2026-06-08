@@ -46,6 +46,7 @@ const CLIENT_OPTIMIZABLE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "imag
 let uploadQueue = Promise.resolve();
 let uploadQueueLength = 0;
 let processingRefreshTimer = null;
+let deferredRender = false;
 const savedTheme = localStorage.getItem(THEME_KEY) || "light";
 document.body.dataset.theme = savedTheme === "dark" ? "dark" : "light";
 
@@ -376,7 +377,7 @@ function syncOpenPreviewEntry() {
   const latestEntry = entries.find(entry => entry.id === previewEntry.id);
   if (!latestEntry) {
     previewEntry = null;
-    if (imageViewer.open) closeImageViewer();
+    if (imageViewer.open) imageViewer.close();
     if (previewDialog.open) closePreviewDialog();
     return;
   }
@@ -575,7 +576,21 @@ function escapeHtml(value) {
   }[char]));
 }
 
+function anyContentDialogOpen() {
+  return previewDialog.open || imageViewer.open;
+}
+
 function render() {
+  // While the user is viewing a work (preview/fullscreen open), the 5s
+  // processing-refresh would rebuild the gallery/module DOM underneath the
+  // dialog. That destroys the card the dialog was opened from, so on close
+  // the page scrolls back to the top (module area). Defer the rebuild until
+  // the dialog closes; dialog contents stay fresh via syncOpenPreviewEntry().
+  if (anyContentDialogOpen()) {
+    deferredRender = true;
+    return;
+  }
+  deferredRender = false;
   renderWelcome();
   activeModuleTitle.textContent = activeModule.name;
   updateSelectedCount();
@@ -589,6 +604,17 @@ function render() {
   renderTiebreakers();
   renderResults();
   openResultDialogIfNeeded();
+}
+
+function flushDeferredRender() {
+  // Only rebuild once every content dialog is closed (closing the fullscreen
+  // viewer can leave the preview grid still open).
+  if (!deferredRender || anyContentDialogOpen()) return;
+  // Preserve scroll position: the rebuild replaces the gallery card the dialog
+  // was opened from, so without this the page can jump up to the module area.
+  const y = window.scrollY;
+  render();
+  window.scrollTo({ top: y });
 }
 
 function entryById(id) {
@@ -1704,6 +1730,7 @@ if (optimizeVideos) {
   });
 }
 closePreview.addEventListener("click", closePreviewDialog);
+previewDialog.addEventListener("close", flushDeferredRender);
 previewDialog.addEventListener("click", event => {
   if (event.target === previewDialog) closePreviewDialog();
 });
@@ -1726,6 +1753,7 @@ viewerFit.addEventListener("click", resetViewerZoom);
 imageViewer.addEventListener("close", () => {
   document.documentElement.classList.remove("viewer-open");
   document.body.classList.remove("viewer-open");
+  flushDeferredRender();
 });
 viewerStage.addEventListener("wheel", event => {
   event.preventDefault();
