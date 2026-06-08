@@ -15,3 +15,5 @@ data/restore-*.json
 scripts/register-restored-*.js
 scripts/restore-*.js
 scripts/upload-*.js
+
+deploy.sh
