@@ -736,7 +736,11 @@ function handleStatic(req, res) {
       sendText(res, 404, "Not found");
       return;
     }
-    res.writeHead(200, { "Content-Type": contentTypeFor(filePath) });
+    const headers = { "Content-Type": contentTypeFor(filePath) };
+    if (!isUpload && [".html", ".js", ".css"].includes(path.extname(filePath).toLowerCase())) {
+      headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+    }
+    res.writeHead(200, headers);
     res.end(data);
   });
 }
