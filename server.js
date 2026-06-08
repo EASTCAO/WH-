@@ -87,6 +87,8 @@ function emptyDb() {
   return {
     entries: [],
     ballots: [],
+    tiebreakers: [],
+    tiebreakerBallots: [],
     photographers: seedPhotographers(),
     periods: [period],
     currentPeriodId: period.id,
@@ -185,6 +187,8 @@ function readDb() {
     const db = JSON.parse(fs.readFileSync(DB_PATH, "utf8"));
     db.entries ||= [];
     db.ballots ||= [];
+    db.tiebreakers ||= [];
+    db.tiebreakerBallots ||= [];
     db.photographers ||= [];
     db.nextSequence ||= db.entries.length + 1;
     ensurePeriods(db);
@@ -607,6 +611,22 @@ function moduleVoteTotals(db) {
   return totals;
 }
 
+function currentTiebreakers(db) {
+  return (db.tiebreakers || []).filter(item => (item.periodId || db.currentPeriodId) === db.currentPeriodId);
+}
+
+function currentTiebreakerBallots(db) {
+  return (db.tiebreakerBallots || []).filter(item => (item.periodId || db.currentPeriodId) === db.currentPeriodId);
+}
+
+function tiebreakerCountsFor(db) {
+  const counts = {};
+  for (const ballot of currentTiebreakerBallots(db)) {
+    counts[ballot.entryId] = (counts[ballot.entryId] || 0) + 1;
+  }
+  return counts;
+}
+
 function archiveEntryFolder(entry) {
   return [
     String(entry.sequence || 0).padStart(3, "0"),
@@ -671,6 +691,7 @@ function buildArchiveCsvFiles(db) {
   const entries = currentEntries(db).sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
   const ballots = currentBallots(db).sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
   const counts = voteCountsFor(db);
+  const tiebreakerCounts = tiebreakerCountsFor(db);
   const moduleTotals = moduleVoteTotals(db);
   const byId = new Map(entries.map(entry => [entry.id, entry]));
 
@@ -701,12 +722,12 @@ function buildArchiveCsvFiles(db) {
     }
   }
 
-  const resultRows = [["模块", "排名", "作品序号", "SKU", "摄影师", "票数", "占比"]];
+  const resultRows = [["模块", "排名", "作品序号", "SKU", "摄影师", "票数", "加赛票数", "占比"]];
   for (const module of MODULES) {
     const ranked = entries
       .filter(entry => entry.moduleName === module.name)
-      .map(entry => ({ entry, votes: counts[entry.id] || 0 }))
-      .sort((a, b) => b.votes - a.votes || (a.entry.sequence || 0) - (b.entry.sequence || 0));
+      .map(entry => ({ entry, votes: counts[entry.id] || 0, tiebreakerVotes: tiebreakerCounts[entry.id] || 0 }))
+      .sort((a, b) => b.votes - a.votes || b.tiebreakerVotes - a.tiebreakerVotes || (a.entry.sequence || 0) - (b.entry.sequence || 0));
     ranked.forEach((item, index) => {
       const total = moduleTotals[module.name] || 0;
       resultRows.push([
@@ -716,6 +737,7 @@ function buildArchiveCsvFiles(db) {
         item.entry.sku || "",
         item.entry.photographer || "",
         item.votes,
+        item.tiebreakerVotes,
         total ? `${Math.round((item.votes / total) * 1000) / 10}%` : "0%"
       ]);
     });
@@ -1206,6 +1228,101 @@ async function handleVote(req, res) {
   sendJson(res, 200, { ok: true });
 }
 
+async function handleTiebreakerUpdate(req, res) {
+  const payload = await collectJson(req);
+  if (!isAdminPayload(payload)) return sendJson(res, 403, { error: "管理员口令不正确" });
+
+  const db = readDb();
+  db.tiebreakers ||= [];
+  db.tiebreakerBallots ||= [];
+  const action = normalizeName(payload.action);
+
+  if (action === "create") {
+    const requestedModuleName = normalizeName(payload.moduleName);
+    const entryIds = Array.isArray(payload.entryIds) ? [...new Set(payload.entryIds.map(String))] : [];
+    const periodEntries = currentEntries(db);
+    const tieEntries = entryIds.map(id => periodEntries.find(entry => entry.id === id));
+    if (entryIds.length < 2) return sendJson(res, 400, { error: "至少选择 2 个并列作品" });
+    if (tieEntries.some(entry => !entry)) return sendJson(res, 400, { error: "加赛作品无效" });
+    const moduleName = MODULE_BY_NAME.has(requestedModuleName) ? requestedModuleName : tieEntries[0].moduleName;
+    if (tieEntries.some(entry => entry.moduleName !== moduleName)) return sendJson(res, 400, { error: "加赛作品必须属于同一个模块" });
+
+    const sortedIds = [...entryIds].sort();
+    const signature = sortedIds.join("|");
+    const duplicate = currentTiebreakers(db).some(item =>
+      item.status === "open" &&
+      item.moduleName === moduleName &&
+      [...(item.entryIds || [])].sort().join("|") === signature
+    );
+    if (duplicate) return sendJson(res, 400, { error: "这组并列作品已经在加赛中" });
+    const id = hash(`${db.currentPeriodId}|${moduleName}|${sortedIds.join("|")}|${Date.now()}`);
+    db.tiebreakers.push({
+      id,
+      periodId: db.currentPeriodId,
+      moduleName,
+      entryIds: sortedIds,
+      status: "open",
+      createdAt: new Date().toISOString()
+    });
+    writeDb(db);
+    sendJson(res, 200, { ok: true, tiebreakerId: id });
+    return;
+  }
+
+  if (action === "close") {
+    const id = normalizeName(payload.tiebreakerId);
+    const item = db.tiebreakers.find(tiebreaker => tiebreaker.id === id && (tiebreaker.periodId || db.currentPeriodId) === db.currentPeriodId);
+    if (!item) return sendJson(res, 404, { error: "加赛不存在" });
+    item.status = "closed";
+    item.closedAt = new Date().toISOString();
+    writeDb(db);
+    sendJson(res, 200, { ok: true });
+    return;
+  }
+
+  sendJson(res, 400, { error: "未知加赛操作" });
+}
+
+async function handleTiebreakerVote(req, res) {
+  const payload = await collectJson(req);
+  const voter = normalizeName(payload.voter);
+  const tiebreakerId = normalizeName(payload.tiebreakerId);
+  const entryId = normalizeName(payload.entryId);
+  const db = readDb();
+
+  if (!voter) return sendJson(res, 400, { error: "请输入投票人姓名" });
+  if (!(db.photographers || []).includes(voter)) return sendJson(res, 403, { error: "姓名不在摄影师名单中，请联系管理员添加" });
+
+  const tiebreaker = currentTiebreakers(db).find(item => item.id === tiebreakerId);
+  if (!tiebreaker || tiebreaker.status !== "open") return sendJson(res, 404, { error: "当前没有可投的加赛" });
+  if (!tiebreaker.entryIds.includes(entryId)) return sendJson(res, 400, { error: "加赛作品无效" });
+
+  const entry = currentEntries(db).find(item => item.id === entryId);
+  if (!entry) return sendJson(res, 400, { error: "加赛作品不存在" });
+  const tiedEntries = currentEntries(db).filter(item => tiebreaker.entryIds.includes(item.id));
+  if (tiedEntries.some(item => item.photographer === voter)) {
+    return sendJson(res, 400, { error: "你有作品在这组并列加赛中，不能参与本组加赛投票" });
+  }
+
+  db.tiebreakerBallots ||= [];
+  db.tiebreakerBallots = db.tiebreakerBallots.filter(ballot =>
+    !(
+      ballot.voter === voter &&
+      ballot.tiebreakerId === tiebreakerId &&
+      (ballot.periodId || db.currentPeriodId) === db.currentPeriodId
+    )
+  );
+  db.tiebreakerBallots.push({
+    periodId: db.currentPeriodId,
+    tiebreakerId,
+    voter,
+    entryId,
+    createdAt: new Date().toISOString()
+  });
+  writeDb(db);
+  sendJson(res, 200, { ok: true });
+}
+
 async function handlePhotographerLogin(req, res) {
   const payload = await collectJson(req);
   const name = normalizeName(payload.name);
@@ -1243,6 +1360,10 @@ async function handleDeleteEntry(req, res) {
   db.ballots = db.ballots
     .map(ballot => ({ ...ballot, entryIds: ballot.entryIds.filter(id => id !== entryId) }))
     .filter(ballot => ballot.entryIds.length > 0);
+  db.tiebreakers = (db.tiebreakers || [])
+    .map(item => ({ ...item, entryIds: (item.entryIds || []).filter(id => id !== entryId) }))
+    .filter(item => item.entryIds.length > 1);
+  db.tiebreakerBallots = (db.tiebreakerBallots || []).filter(ballot => ballot.entryId !== entryId);
   writeDb(db);
   removeEntryFiles(entryId);
   sendJson(res, 200, { ok: true });
@@ -1259,6 +1380,8 @@ async function handleClearPeriod(req, res) {
 
   db.entries = (db.entries || []).filter(entry => (entry.periodId || periodId) !== periodId);
   db.ballots = (db.ballots || []).filter(ballot => (ballot.periodId || periodId) !== periodId);
+  db.tiebreakers = (db.tiebreakers || []).filter(item => (item.periodId || periodId) !== periodId);
+  db.tiebreakerBallots = (db.tiebreakerBallots || []).filter(ballot => (ballot.periodId || periodId) !== periodId);
   const period = currentPeriod(db);
   period.votingOpen = false;
   period.resultsPublished = false;
@@ -1409,9 +1532,45 @@ function handleApi(req, res) {
     for (const ballot of currentBallots(db)) {
       for (const entryId of ballot.entryIds) counts[entryId] = (counts[entryId] || 0) + 1;
     }
+    const tiebreakerCounts = tiebreakerCountsFor(db);
     const view = adminView ? publicEntry : publishedEntry;
-    const results = currentEntries(db).map(entry => ({ ...view(entry), votes: counts[entry.id] || 0 }));
+    const results = currentEntries(db).map(entry => ({
+      ...view(entry),
+      votes: counts[entry.id] || 0,
+      tiebreakerVotes: tiebreakerCounts[entry.id] || 0
+    }));
     sendJson(res, 200, { results });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/tiebreakers") {
+    const viewerName = normalizeName(url.searchParams.get("voterName"));
+    const adminView = canViewAdmin(url);
+    if (!adminView && !db.resultsPublished) {
+      sendJson(res, 200, { tiebreakers: [] });
+      return;
+    }
+    const periodEntries = currentEntries(db);
+    const voteCounts = voteCountsFor(db);
+    const counts = tiebreakerCountsFor(db);
+    const myVotes = new Map(
+      currentTiebreakerBallots(db)
+        .filter(ballot => viewerName && ballot.voter === viewerName)
+        .map(ballot => [ballot.tiebreakerId, ballot.entryId])
+    );
+    const tiebreakers = currentTiebreakers(db).map(item => ({
+      ...item,
+      entries: item.entryIds
+        .map(id => periodEntries.find(entry => entry.id === id))
+        .filter(Boolean)
+        .map(entry => ({
+          ...(adminView ? publicEntry(entry) : voterEntry(entry, viewerName)),
+          votes: voteCounts[entry.id] || 0,
+          tiebreakerVotes: counts[entry.id] || 0
+        })),
+      myEntryId: myVotes.get(item.id) || ""
+    }));
+    sendJson(res, 200, { tiebreakers });
     return;
   }
 
@@ -1452,6 +1611,16 @@ function handleApi(req, res) {
 
   if (req.method === "POST" && url.pathname === "/api/vote") {
     handleVote(req, res).catch(error => sendJson(res, 400, { error: error.message }));
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/tiebreakers") {
+    handleTiebreakerUpdate(req, res).catch(error => sendJson(res, 400, { error: error.message }));
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/tiebreaker-vote") {
+    handleTiebreakerVote(req, res).catch(error => sendJson(res, 400, { error: error.message }));
     return;
   }
 

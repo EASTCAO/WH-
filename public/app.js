@@ -14,6 +14,7 @@ let modules = [];
 let activeModule = null;
 let entries = [];
 let results = [];
+let tiebreakers = [];
 let adminMode = false;
 let systemInfo = null;
 let votingOpen = false;
@@ -29,6 +30,7 @@ let loggedInName = localStorage.getItem("photoReviewVoter") || "";
 let toastTimer = null;
 let ballots = [];
 let adminBallots = [];
+const tiebreakerSelected = new Map();
 let completedModules = new Set();
 let isSubmittingVote = false;
 let resultDialogDismissed = false;
@@ -60,6 +62,8 @@ const appToast = document.querySelector("#appToast");
 const gallery = document.querySelector("#gallery");
 const resultsBox = document.querySelector("#results");
 const resultsPanel = document.querySelector(".results-panel");
+const tiebreakerPanel = document.querySelector("#tiebreakerPanel");
+const tiebreakerList = document.querySelector("#tiebreakerList");
 const voterInput = document.querySelector("#voterName");
 const voterLogin = document.querySelector("#voterLogin");
 const voterLogout = document.querySelector("#voterLogout");
@@ -235,7 +239,7 @@ function resultLimitForModule(moduleName) {
 function moduleResultList(moduleName) {
   return results
     .filter(entry => entry.moduleName === moduleName)
-    .sort((a, b) => b.votes - a.votes || a.sequence - b.sequence);
+    .sort((a, b) => b.votes - a.votes || (b.tiebreakerVotes || 0) - (a.tiebreakerVotes || 0) || a.sequence - b.sequence);
 }
 
 function moduleVoteTotal(moduleName) {
@@ -246,6 +250,26 @@ function votePercent(entry, totalVotes) {
   if (!totalVotes) return "0%";
   const value = Math.round((entry.votes / totalVotes) * 1000) / 10;
   return `${value}%`;
+}
+
+function tiebreakerText(entry) {
+  return entry.tiebreakerVotes ? ` · 加赛 ${entry.tiebreakerVotes} 票` : "";
+}
+
+function resultTieGroups(moduleName) {
+  const groups = new Map();
+  for (const entry of moduleResultList(moduleName)) {
+    if (!entry.votes) continue;
+    const key = String(entry.votes);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(entry);
+  }
+  return [...groups.values()].filter(group => group.length > 1);
+}
+
+function hasOpenTiebreakerFor(entryIds) {
+  const wanted = [...entryIds].sort().join("|");
+  return tiebreakers.some(item => item.status === "open" && [...(item.entryIds || [])].sort().join("|") === wanted);
 }
 
 function entryMeta(entry) {
@@ -326,6 +350,12 @@ async function loadData() {
   activeModule ||= modules[0];
   const resultData = await fetchJson(`/api/results${query}`);
   results = resultData.results;
+  const tiebreakerData = await fetchJson(`/api/tiebreakers${query}`);
+  tiebreakers = Array.isArray(tiebreakerData.tiebreakers) ? tiebreakerData.tiebreakers : [];
+  tiebreakerSelected.clear();
+  for (const item of tiebreakers) {
+    if (item.myEntryId) tiebreakerSelected.set(item.id, item.myEntryId);
+  }
   await loadBallots();
   await loadAdminBallots();
   renderPhotographerLogin();
@@ -553,6 +583,7 @@ function render() {
   renderBallotAdmin();
   renderModules();
   renderGallery();
+  renderTiebreakers();
   renderResults();
   openResultDialogIfNeeded();
 }
@@ -741,13 +772,30 @@ function renderPreviewContent() {
   mediaPreviewGrid.innerHTML = previewEntry.media.map((item, index) => `
     <button class="media-preview-card${item.processing ? " processing" : ""}" type="button" data-index="${index}">
       ${item.kind === "video"
-        ? `<video src="${item.src}" muted preload="metadata"></video>`
-        : `<img src="${item.src}" alt="${entryTitle(previewEntry)} 第 ${index + 1} 张">`}
+        ? `<video src="${item.src}" muted playsinline preload="metadata"></video><span class="media-kind-badge">视频</span><span class="media-play-badge">点击播放</span>`
+        : `<img src="${item.src}" loading="lazy" alt="${entryTitle(previewEntry)} 第 ${index + 1} 张"><span class="media-kind-badge">图片</span>`}
+      <span class="media-index-badge">${index + 1}/${previewEntry.media.length}</span>
       ${item.processing ? `<span class="media-processing">处理中</span>` : ""}
+      <span class="media-error" hidden>加载失败，点击打开原文件</span>
     </button>
   `).join("");
+  mediaPreviewGrid.querySelectorAll("img, video").forEach(media => {
+    media.addEventListener("error", () => {
+      const card = media.closest(".media-preview-card");
+      card?.classList.add("is-error");
+      const error = card?.querySelector(".media-error");
+      if (error) error.hidden = false;
+    });
+  });
   mediaPreviewGrid.querySelectorAll(".media-preview-card").forEach(button => {
-    button.addEventListener("click", () => openImageViewer(Number(button.dataset.index)));
+    button.addEventListener("click", () => {
+      if (button.classList.contains("is-error")) {
+        const item = previewEntry?.media?.[Number(button.dataset.index)];
+        if (item?.src) window.open(item.src, "_blank", "noopener");
+        return;
+      }
+      openImageViewer(Number(button.dataset.index));
+    });
   });
 }
 
@@ -770,8 +818,16 @@ function renderImageViewer() {
   viewerTitle.textContent = entryTitle(previewEntry);
   viewerMeta.textContent = `${entryMeta(previewEntry)} · ${viewerIndex + 1}/${previewEntry.media.length}`;
   viewerStage.innerHTML = item.kind === "video"
-    ? `<video class="viewer-media" src="${item.src}" controls autoplay></video>`
+    ? `<video class="viewer-media" src="${item.src}" controls autoplay playsinline preload="auto"></video><a class="viewer-open-original" href="${item.src}" target="_blank" rel="noopener">新窗口打开视频</a>`
     : `<img class="viewer-media" src="${item.src}" alt="${entryTitle(previewEntry)} 第 ${viewerIndex + 1} 张">`;
+  const media = viewerMedia();
+  media?.addEventListener("error", () => {
+    viewerStage.classList.add("is-error");
+    if (!viewerStage.querySelector(".viewer-load-error")) {
+      viewerStage.insertAdjacentHTML("beforeend", `<div class="viewer-load-error">文件加载失败，可以点击下方按钮打开原文件。</div>`);
+    }
+  });
+  media?.addEventListener("loadeddata", () => viewerStage.classList.remove("is-error"));
   applyViewerZoom();
 }
 
@@ -833,6 +889,104 @@ async function deleteEntry(entry) {
   }
 }
 
+function renderTiebreakers() {
+  if (!tiebreakerPanel || !tiebreakerList) return;
+  const visible = tiebreakers.filter(item => item.status === "open" && (adminMode || voterName()));
+  tiebreakerPanel.hidden = visible.length === 0;
+  if (!visible.length) {
+    tiebreakerList.innerHTML = "";
+    return;
+  }
+
+  tiebreakerList.innerHTML = visible.map(item => {
+    const picked = tiebreakerSelected.get(item.id) || item.myEntryId || "";
+    const blockedByOwnEntry = !adminMode && item.entries.some(entry => entry.isOwn);
+    return `
+      <article class="tiebreaker-card${blockedByOwnEntry ? " blocked" : ""}" data-tiebreaker="${item.id}">
+        <div class="tiebreaker-head">
+          <div>
+            <strong>${escapeHtml(item.moduleName)} 并列加赛</strong>
+            <span>${blockedByOwnEntry ? "你有作品在本组加赛中，不能参与本组投票" : `${item.entries.length} 个同票作品 · 每人选 1 个`}</span>
+          </div>
+          ${adminMode ? `<button class="close-tiebreaker" type="button">结束加赛</button>` : ""}
+        </div>
+        <div class="tiebreaker-options">
+          ${item.entries.map(entry => {
+            const checked = picked === entry.id;
+            const disabled = blockedByOwnEntry || Boolean(entry.isOwn);
+            return `
+              <button class="tiebreaker-option${checked ? " selected" : ""}${disabled ? " disabled" : ""}" type="button" data-entry="${entry.id}" ${disabled ? "disabled" : ""}>
+                <span>${entryTitle(entry)}</span>
+                <small>${adminMode ? `${escapeHtml(entry.photographer || "")} · ` : ""}原票 ${entry.votes || 0} · 加赛 ${entry.tiebreakerVotes || 0}</small>
+              </button>
+            `;
+          }).join("")}
+        </div>
+        ${!adminMode ? `<button class="submit-tiebreaker" type="button" ${picked && !blockedByOwnEntry ? "" : "disabled"}>${blockedByOwnEntry ? "本组不可投票" : "提交加赛投票"}</button>` : ""}
+      </article>
+    `;
+  }).join("");
+
+  tiebreakerList.querySelectorAll(".tiebreaker-card").forEach(card => {
+    const tiebreakerId = card.dataset.tiebreaker;
+    card.querySelectorAll(".tiebreaker-option").forEach(button => {
+      button.addEventListener("click", () => {
+        if (adminMode || button.disabled) return;
+        tiebreakerSelected.set(tiebreakerId, button.dataset.entry);
+        renderTiebreakers();
+      });
+    });
+    card.querySelector(".submit-tiebreaker")?.addEventListener("click", () => submitTiebreakerVote(tiebreakerId));
+    card.querySelector(".close-tiebreaker")?.addEventListener("click", () => closeTiebreaker(tiebreakerId));
+  });
+}
+
+async function createTiebreaker(moduleName, entryIds) {
+  if (!adminMode) return;
+  try {
+    await fetchJson("/api/tiebreakers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adminCode: adminCode.value.trim(), action: "create", moduleName, entryIds })
+    });
+    await loadData();
+    showToast("已发起并列加赛", "success");
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function closeTiebreaker(tiebreakerId) {
+  if (!adminMode) return;
+  try {
+    await fetchJson("/api/tiebreakers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adminCode: adminCode.value.trim(), action: "close", tiebreakerId })
+    });
+    await loadData();
+    showToast("已结束加赛", "success");
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function submitTiebreakerVote(tiebreakerId) {
+  const entryId = tiebreakerSelected.get(tiebreakerId);
+  if (!entryId) return;
+  try {
+    await fetchJson("/api/tiebreaker-vote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ voter: voterName(), tiebreakerId, entryId })
+    });
+    await loadData();
+    showToast("加赛投票已提交，排名会自动更新", "success");
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
 function renderResults() {
   const hasResultEntries = results.some(entry => entry.mediaCount > 0 || entry.votes > 0 || entry.sku);
   const canViewResults = adminMode || (resultsPublished && hasResultEntries);
@@ -858,7 +1012,7 @@ function renderResults() {
             <span class="winner-rank">第 ${index + 1} 名</span>
             <strong>${resultDisplayTitle(entry)}</strong>
             <div class="winner-score">
-              <span>${entry.votes} 票</span>
+              <span>${entry.votes} 票${tiebreakerText(entry)}</span>
               <small>${percent}</small>
             </div>
             <div class="winner-bar" aria-hidden="true"><i style="width:${percent}"></i></div>
@@ -873,20 +1027,40 @@ function renderResults() {
           ${otherEntries.map((entry, index) => `
             <div class="result-row">
               <span><b>第 ${index + awardLimit + 1} 名</b> ${resultDisplayTitle(entry)}</span>
-              <strong><span>${entry.votes} 票</span><small>${votePercent(entry, totalVotes)}</small></strong>
+              <strong><span>${entry.votes} 票${tiebreakerText(entry)}</span><small>${votePercent(entry, totalVotes)}</small></strong>
             </div>
           `).join("")}
         </details>
       `
       : "";
+    const tieGroups = adminMode
+      ? resultTieGroups(module.name).map(group => {
+        const ids = group.map(entry => entry.id);
+        const open = hasOpenTiebreakerFor(ids);
+        return `
+          <div class="tie-admin-row">
+            <span>${group[0].votes} 票并列：${group.map(resultDisplayTitle).join("、")}</span>
+            <button class="create-tiebreaker" type="button" data-module="${escapeHtml(module.name)}" data-entry-ids="${escapeHtml(ids.join(","))}" ${open ? "disabled" : ""}>
+              ${open ? "加赛进行中" : "发起加赛"}
+            </button>
+          </div>
+        `;
+      }).join("")
+      : "";
     return `
       <section class="result-module">
         <h3>${module.name}<span>获奖 ${awardLimit} 名 · ${resultsPublished ? "已公布" : "预览"}</span></h3>
         <div class="winner-grid">${awardRows}</div>
+        ${tieGroups ? `<div class="tie-admin-list">${tieGroups}</div>` : ""}
         ${otherRows}
       </section>
     `;
   }).join("");
+  resultsBox.querySelectorAll(".create-tiebreaker").forEach(button => {
+    button.addEventListener("click", () => {
+      createTiebreaker(button.dataset.module, String(button.dataset.entryIds || "").split(",").filter(Boolean));
+    });
+  });
 }
 
 function renderResultDialog() {
@@ -899,7 +1073,7 @@ function renderResultDialog() {
         <div class="result-dialog-row rank-${index + 1} award-row">
           <span class="rank-mark">第 ${index + 1} 名 · 获奖</span>
           <span class="rank-title">${resultDisplayTitle(entry)}</span>
-          <strong><span>${entry.votes} 票</span><small>${votePercent(entry, totalVotes)}</small></strong>
+          <strong><span>${entry.votes} 票${tiebreakerText(entry)}</span><small>${votePercent(entry, totalVotes)}</small></strong>
         </div>
       `).join("")
       : `<div class="empty compact">暂无作品</div>`;
