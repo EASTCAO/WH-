@@ -1404,8 +1404,6 @@ publishToggle.addEventListener("click", async () => {
   if (!adminMode) return;
   if (!(await ensureSelectedPeriodActive())) return;
   const next = !resultsPublished;
-  const message = next ? "确定公布最终结果吗？公布后摄影师可以看到各模块排名。" : "确定收回最终结果吗？收回后普通摄影师将看不到排名。";
-  if (!confirm(message)) return;
   try {
     await fetchJson("/api/status", {
       method: "POST",
