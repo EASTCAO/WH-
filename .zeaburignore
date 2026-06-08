@@ -1,0 +1,17 @@
+node_modules/
+npm-debug.log*
+*.log
+
+.env
+.git/
+.gitignore
+.zeaburignore
+
+data/db.json
+data/uploads/
+data/backups/
+data/restore-*.json
+
+scripts/register-restored-*.js
+scripts/restore-*.js
+scripts/upload-*.js
