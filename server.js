@@ -907,6 +907,10 @@ function processOptimizeQueue() {
 }
 
 async function optimizeMediaJob(job) {
+  if (job.storage === "object" && job.mediaKind === "image") {
+    await optimizeObjectImageJob(job);
+    return;
+  }
   if (job.storage === "object") {
     await optimizeObjectMediaJob(job);
     return;
@@ -947,6 +951,41 @@ async function optimizeObjectMediaJob(job) {
     const displayUrl = await putStorageObject(displayKey, displayPath, "video/mp4");
     await markMediaOptimized(job.entryId, job.mediaId, displayUrl, "");
     console.log(`Background video display finished: ${job.originalFilename} -> ${displayKey}`);
+  } catch (error) {
+    await markMediaOptimized(job.entryId, job.mediaId, null, error.message);
+    throw error;
+  } finally {
+    fs.rm(inputPath, { force: true }, () => {});
+    fs.rm(displayPath, { force: true }, () => {});
+  }
+}
+
+async function optimizeObjectImageJob(job) {
+  if (job.mediaKind !== "image" || !storageConfigured()) {
+    await markMediaOptimized(job.entryId, job.mediaId, null, "");
+    return;
+  }
+
+  const tempDir = path.join(UPLOAD_DIR, "_tmp", job.entryId);
+  fs.mkdirSync(tempDir, { recursive: true });
+  const inputPath = path.join(tempDir, `${job.mediaId}${job.ext || ".jpg"}`);
+  const displayPath = path.join(tempDir, `${job.mediaId}_display.webp`);
+  try {
+    await downloadRemoteFile(job.originalSrc, inputPath);
+    await sharp(inputPath)
+      .rotate()
+      .resize({
+        width: IMAGE_MAX_DIMENSION,
+        height: IMAGE_MAX_DIMENSION,
+        fit: "inside",
+        withoutEnlargement: true
+      })
+      .webp({ quality: 88, effort: IMAGE_WEBP_EFFORT })
+      .toFile(displayPath);
+    const displayKey = createStorageObjectKey(job.periodId, job.entryId, `${path.basename(job.mediaId)}_display.webp`);
+    const displayUrl = await putStorageObject(displayKey, displayPath, "image/webp");
+    await markMediaOptimized(job.entryId, job.mediaId, displayUrl, "");
+    console.log(`Background image display finished: ${job.originalFilename} -> ${displayKey}`);
   } catch (error) {
     await markMediaOptimized(job.entryId, job.mediaId, null, error.message);
     throw error;
@@ -1323,6 +1362,37 @@ async function handleVideoOptimize(req, res) {
         originalDiskPath: media.originalSrc?.startsWith("/data/uploads/")
           ? path.join(UPLOAD_DIR, decodeURIComponent(media.originalSrc.slice("/data/uploads/".length)))
           : ""
+      });
+    }
+  }
+  writeDb(db);
+  sendJson(res, 200, { ok: true, queued, queue: optimizeQueueState() });
+}
+
+async function handleImageOptimize(req, res) {
+  const payload = await collectJson(req);
+  if (!isAdminPayload(payload)) return sendJson(res, 403, { error: "管理员口令不正确" });
+
+  const db = readDb();
+  let queued = 0;
+  for (const entry of currentEntries(db)) {
+    for (const media of entry.media || []) {
+      if (media.kind !== "image") continue;
+      if (media.optimized && media.src && media.src !== media.originalSrc) continue;
+      if (media.processing) continue;
+      const source = media.originalSrc || media.src || "";
+      if (!/^https?:\/\//i.test(source)) continue;
+      media.processing = true;
+      queued += 1;
+      queueMediaOptimization({
+        entryId: entry.id,
+        mediaId: media.id,
+        originalSrc: source,
+        originalFilename: media.name || `${entry.sku || entry.id}.jpg`,
+        periodId: entry.periodId || db.currentPeriodId,
+        mediaKind: "image",
+        ext: path.extname(media.name || source || ".jpg").toLowerCase() || ".jpg",
+        storage: "object"
       });
     }
   }
@@ -1770,6 +1840,11 @@ function handleApi(req, res) {
 
   if (req.method === "POST" && url.pathname === "/api/admin/optimize-videos") {
     handleVideoOptimize(req, res).catch(error => sendJson(res, 400, { error: error.message }));
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/admin/optimize-images") {
+    handleImageOptimize(req, res).catch(error => sendJson(res, 400, { error: error.message }));
     return;
   }
 

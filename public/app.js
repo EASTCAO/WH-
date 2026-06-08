@@ -781,6 +781,14 @@ function renderPreviewContent() {
   `).join("");
   mediaPreviewGrid.querySelectorAll("img").forEach(media => {
     media.addEventListener("error", () => {
+      const retryCount = Number(media.dataset.retryCount || "0");
+      if (retryCount < 2) {
+        media.dataset.retryCount = String(retryCount + 1);
+        const src = new URL(media.currentSrc || media.src, window.location.href);
+        src.searchParams.set("retry", `${Date.now()}-${retryCount + 1}`);
+        media.src = src.toString();
+        return;
+      }
       const card = media.closest(".media-preview-card");
       card?.classList.add("is-error");
       const error = card?.querySelector(".media-error");
