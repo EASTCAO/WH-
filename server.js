@@ -3,7 +3,11 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const childProcess = require("child_process");
+const https = require("https");
+const { PassThrough } = require("stream");
 const sharp = require("sharp");
+const archiver = require("archiver");
+const lazystream = require("lazystream");
 
 const ROOT = __dirname;
 const PUBLIC_DIR = path.join(ROOT, "public");
@@ -565,6 +569,209 @@ function publishedEntry(entry) {
   const item = voterEntry(entry);
   item.photographer = entry.photographer;
   return item;
+}
+
+function csvCell(value) {
+  const text = String(value ?? "");
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function csvRows(rows) {
+  return "\ufeff" + rows.map(row => row.map(csvCell).join(",")).join("\r\n") + "\r\n";
+}
+
+function archiveName(value) {
+  return safeSegment(value).replace(/\s+/g, "_");
+}
+
+function mediaArchiveName(entry, media, index) {
+  const source = media.originalSrc || media.src || media.name || "";
+  const ext = path.extname(new URL(source, "http://localhost").pathname) || (media.kind === "video" ? ".mp4" : ".jpg");
+  const base = archiveName(media.name || `${media.kind || "media"}_${index + 1}`);
+  return `${String(index + 1).padStart(3, "0")}_${base}${base.toLowerCase().endsWith(ext.toLowerCase()) ? "" : ext}`;
+}
+
+function voteCountsFor(db) {
+  const counts = {};
+  for (const ballot of currentBallots(db)) {
+    for (const entryId of ballot.entryIds || []) counts[entryId] = (counts[entryId] || 0) + 1;
+  }
+  return counts;
+}
+
+function moduleVoteTotals(db) {
+  const totals = {};
+  for (const ballot of currentBallots(db)) {
+    totals[ballot.moduleName] = (totals[ballot.moduleName] || 0) + (ballot.entryIds || []).length;
+  }
+  return totals;
+}
+
+function archiveEntryFolder(entry) {
+  return [
+    String(entry.sequence || 0).padStart(3, "0"),
+    archiveName(entry.sku || "SKU"),
+    archiveName(entry.photographer || "未识别")
+  ].join("_");
+}
+
+function appendRemoteFile(archive, src, targetPath) {
+  archive.append(new lazystream.Readable(() => {
+    const stream = new PassThrough();
+    const requestUrl = new URL(src);
+    https.get(requestUrl, response => {
+      if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+        response.resume();
+        https.get(new URL(response.headers.location, requestUrl), redirected => {
+          if (redirected.statusCode !== 200) {
+            stream.destroy(new Error(`下载失败 ${redirected.statusCode}: ${src}`));
+            redirected.resume();
+            return;
+          }
+          redirected.pipe(stream);
+        }).on("error", error => stream.destroy(error));
+        return;
+      }
+      if (response.statusCode !== 200) {
+        stream.destroy(new Error(`下载失败 ${response.statusCode}: ${src}`));
+        response.resume();
+        return;
+      }
+      response.pipe(stream);
+    }).on("error", error => stream.destroy(error));
+    return stream;
+  }), { name: targetPath });
+}
+
+function appendLocalFile(archive, src, targetPath) {
+  const localPath = path.normalize(path.join(UPLOAD_DIR, decodeURIComponent(src.slice("/data/uploads/".length))));
+  if (isInside(UPLOAD_DIR, localPath) && fs.existsSync(localPath)) {
+    archive.file(localPath, { name: targetPath });
+  }
+}
+
+function appendMediaToArchive(archive, entry, media, index) {
+  const src = media.originalSrc || media.src;
+  if (!src) return;
+  const targetPath = [
+    "作品文件",
+    archiveName(entry.moduleName || "未分类"),
+    archiveEntryFolder(entry),
+    mediaArchiveName(entry, media, index)
+  ].join("/");
+
+  if (/^https?:\/\//i.test(src)) {
+    appendRemoteFile(archive, src, targetPath);
+  } else if (src.startsWith("/data/uploads/")) {
+    appendLocalFile(archive, src, targetPath);
+  }
+}
+
+function buildArchiveCsvFiles(db) {
+  const entries = currentEntries(db).sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
+  const ballots = currentBallots(db).sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+  const counts = voteCountsFor(db);
+  const moduleTotals = moduleVoteTotals(db);
+  const byId = new Map(entries.map(entry => [entry.id, entry]));
+
+  const entryRows = [["模块", "作品序号", "SKU", "摄影师", "文件数量", "上传时间"]];
+  for (const entry of entries) {
+    entryRows.push([
+      entry.moduleName,
+      entry.sequence || "",
+      entry.sku || "",
+      entry.photographer || "",
+      (entry.media || []).length,
+      entry.createdAt || ""
+    ]);
+  }
+
+  const ballotRows = [["投票人", "模块", "选择作品序号", "选择SKU", "作品摄影师", "提交时间"]];
+  for (const ballot of ballots) {
+    for (const entryId of ballot.entryIds || []) {
+      const entry = byId.get(entryId);
+      ballotRows.push([
+        ballot.voter || "",
+        ballot.moduleName || "",
+        entry?.sequence || "",
+        entry?.sku || "",
+        entry?.photographer || "",
+        ballot.createdAt || ""
+      ]);
+    }
+  }
+
+  const resultRows = [["模块", "排名", "作品序号", "SKU", "摄影师", "票数", "占比"]];
+  for (const module of MODULES) {
+    const ranked = entries
+      .filter(entry => entry.moduleName === module.name)
+      .map(entry => ({ entry, votes: counts[entry.id] || 0 }))
+      .sort((a, b) => b.votes - a.votes || (a.entry.sequence || 0) - (b.entry.sequence || 0));
+    ranked.forEach((item, index) => {
+      const total = moduleTotals[module.name] || 0;
+      resultRows.push([
+        module.name,
+        index + 1,
+        item.entry.sequence || "",
+        item.entry.sku || "",
+        item.entry.photographer || "",
+        item.votes,
+        total ? `${Math.round((item.votes / total) * 1000) / 10}%` : "0%"
+      ]);
+    });
+  }
+
+  return {
+    "作品清单.csv": csvRows(entryRows),
+    "投票记录.csv": csvRows(ballotRows),
+    "最终排名.csv": csvRows(resultRows)
+  };
+}
+
+function handleAdminArchive(req, res, url) {
+  if (!canViewAdmin(url)) return sendJson(res, 403, { error: "管理员口令不正确" });
+
+  const db = readDb();
+  const period = currentPeriod(db);
+  const entries = currentEntries(db).sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
+  const archive = archiver("zip", { zlib: { level: 1 } });
+  const filename = `${period.id || "photo-review"}-archive.zip`;
+
+  archive.on("error", error => {
+    console.warn(`Archive failed: ${error.message}`);
+    if (!res.headersSent) sendJson(res, 500, { error: "生成归档失败" });
+    else res.destroy(error);
+  });
+
+  res.writeHead(200, {
+    "Content-Type": "application/zip",
+    "Content-Disposition": `attachment; filename="${filename}"`,
+    "Cache-Control": "no-store"
+  });
+  archive.pipe(res);
+
+  archive.append([
+    `评优月份：${period.name || period.id}`,
+    `作品数量：${entries.length}`,
+    `投票状态：${db.votingOpen ? "已开始" : "未开始"}`,
+    `结果状态：${db.resultsPublished ? "已公布" : "未公布"}`,
+    "",
+    "压缩包内容：",
+    "1. 作品文件：按模块 / 作品序号_SKU_摄影师 存放图片或视频。",
+    "2. 作品清单.csv：当前月份全部作品。",
+    "3. 投票记录.csv：每位摄影师的投票记录。",
+    "4. 最终排名.csv：每个模块的票数和占比。"
+  ].join("\r\n"), { name: "归档说明.txt" });
+
+  for (const [name, content] of Object.entries(buildArchiveCsvFiles(db))) {
+    archive.append(content, { name });
+  }
+
+  for (const entry of entries) {
+    (entry.media || []).forEach((media, index) => appendMediaToArchive(archive, entry, media, index));
+  }
+
+  archive.finalize();
 }
 
 function canViewAdmin(url) {
@@ -1215,6 +1422,11 @@ function handleApi(req, res) {
       ? periodBallots
       : periodBallots.filter(ballot => ballot.voter === voter);
     sendJson(res, 200, { ballots });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/admin/archive") {
+    handleAdminArchive(req, res, url);
     return;
   }
 

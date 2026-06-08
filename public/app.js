@@ -76,6 +76,7 @@ const adminCode = document.querySelector("#adminCode");
 const adminToggle = document.querySelector("#adminToggle");
 const statusToggle = document.querySelector("#statusToggle");
 const publishToggle = document.querySelector("#publishToggle");
+const downloadArchive = document.querySelector("#downloadArchive");
 const clearCurrentPeriod = document.querySelector("#clearCurrentPeriod");
 const adminPanel = document.querySelector("#adminPanel");
 const photographerName = document.querySelector("#photographerName");
@@ -598,6 +599,11 @@ function renderStatusControls() {
   publishToggle.hidden = !adminMode;
   publishToggle.disabled = !adminMode;
   publishToggle.textContent = resultsPublished ? "收回结果" : "公布结果";
+  if (downloadArchive) {
+    downloadArchive.hidden = !adminMode;
+    downloadArchive.disabled = !adminMode;
+    downloadArchive.textContent = "\u4e0b\u8f7d\u5f52\u6863";
+  }
   if (clearCurrentPeriod) clearCurrentPeriod.hidden = !adminMode;
   submitVote.disabled = !votingOpen || !voterName() || isSubmittingVote;
   submitVote.classList.toggle("is-loading", isSubmittingVote);
@@ -1417,6 +1423,24 @@ publishToggle.addEventListener("click", async () => {
     alert(error.message);
   }
 });
+if (downloadArchive) {
+  downloadArchive.addEventListener("click", () => {
+    if (!adminMode) return;
+    const code = adminCode.value.trim();
+    if (!code) {
+      alert("请先登录管理员后台");
+      return;
+    }
+    const url = `/api/admin/archive?adminCode=${encodeURIComponent(code)}`;
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    showToast("正在生成本月归档，请等待浏览器下载完成");
+  });
+}
 if (clearCurrentPeriod) {
   clearCurrentPeriod.addEventListener("click", async () => {
     if (!adminMode) return;
