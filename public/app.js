@@ -772,14 +772,14 @@ function renderPreviewContent() {
   mediaPreviewGrid.innerHTML = previewEntry.media.map((item, index) => `
     <button class="media-preview-card${item.processing ? " processing" : ""}" type="button" data-index="${index}">
       ${item.kind === "video"
-        ? `<video src="${item.src}" muted playsinline preload="metadata"></video><span class="media-kind-badge">视频</span><span class="media-play-badge">点击播放</span>`
+        ? `<span class="video-preview-placeholder" aria-hidden="true"><span class="video-play-icon">▶</span></span><span class="media-kind-badge">视频</span><span class="media-play-badge">点击播放</span>`
         : `<img src="${item.src}" loading="lazy" alt="${entryTitle(previewEntry)} 第 ${index + 1} 张"><span class="media-kind-badge">图片</span>`}
       <span class="media-index-badge">${index + 1}/${previewEntry.media.length}</span>
       ${item.processing ? `<span class="media-processing">处理中</span>` : ""}
       <span class="media-error" hidden>加载失败，点击打开原文件</span>
     </button>
   `).join("");
-  mediaPreviewGrid.querySelectorAll("img, video").forEach(media => {
+  mediaPreviewGrid.querySelectorAll("img").forEach(media => {
     media.addEventListener("error", () => {
       const card = media.closest(".media-preview-card");
       card?.classList.add("is-error");
@@ -818,7 +818,7 @@ function renderImageViewer() {
   viewerTitle.textContent = entryTitle(previewEntry);
   viewerMeta.textContent = `${entryMeta(previewEntry)} · ${viewerIndex + 1}/${previewEntry.media.length}`;
   viewerStage.innerHTML = item.kind === "video"
-    ? `<video class="viewer-media" src="${item.src}" controls autoplay playsinline preload="auto"></video><a class="viewer-open-original" href="${item.src}" target="_blank" rel="noopener">新窗口打开视频</a>`
+    ? `<video class="viewer-media" src="${item.src}" controls autoplay playsinline preload="metadata"></video><a class="viewer-open-original" href="${item.src}" target="_blank" rel="noopener">新窗口打开视频</a>`
     : `<img class="viewer-media" src="${item.src}" alt="${entryTitle(previewEntry)} 第 ${viewerIndex + 1} 张">`;
   const media = viewerMedia();
   media?.addEventListener("error", () => {
