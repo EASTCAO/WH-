@@ -10,6 +10,7 @@ npm-debug.log*
 data/db.json
 data/uploads/
 data/backups/
+data/backup-*.json
 data/restore-*.json
 
 scripts/register-restored-*.js
