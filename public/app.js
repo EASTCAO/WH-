@@ -1758,6 +1758,9 @@ viewerFit.addEventListener("click", resetViewerZoom);
 imageViewer.addEventListener("close", () => {
   document.documentElement.classList.remove("viewer-open");
   document.body.classList.remove("viewer-open");
+  // Clearing the stage removes the <video> element so playback (and its audio
+  // / network download) stops immediately — closing the dialog alone doesn't.
+  viewerStage.innerHTML = "";
   // Restore the pre-viewer scroll position that overflow:hidden collapsed.
   window.scrollTo({ top: scrollBeforeViewer });
   flushDeferredRender();
