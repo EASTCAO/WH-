@@ -47,6 +47,7 @@ let uploadQueue = Promise.resolve();
 let uploadQueueLength = 0;
 let processingRefreshTimer = null;
 let deferredRender = false;
+let scrollBeforeViewer = 0;
 const savedTheme = localStorage.getItem(THEME_KEY) || "light";
 document.body.dataset.theme = savedTheme === "dark" ? "dark" : "light";
 
@@ -875,6 +876,10 @@ function openImageViewer(index) {
   viewerIndex = index;
   resetViewerZoom();
   renderImageViewer();
+  // The .viewer-open class locks the page (overflow:hidden), which collapses
+  // the scroll position to 0. Remember where we were so we can restore it on
+  // close — otherwise closing the viewer dumps the user back at the top.
+  scrollBeforeViewer = window.scrollY;
   document.documentElement.classList.add("viewer-open");
   document.body.classList.add("viewer-open");
   imageViewer.showModal();
@@ -1753,6 +1758,8 @@ viewerFit.addEventListener("click", resetViewerZoom);
 imageViewer.addEventListener("close", () => {
   document.documentElement.classList.remove("viewer-open");
   document.body.classList.remove("viewer-open");
+  // Restore the pre-viewer scroll position that overflow:hidden collapsed.
+  window.scrollTo({ top: scrollBeforeViewer });
   flushDeferredRender();
 });
 viewerStage.addEventListener("wheel", event => {
