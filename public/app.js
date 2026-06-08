@@ -82,6 +82,7 @@ const statusToggle = document.querySelector("#statusToggle");
 const publishToggle = document.querySelector("#publishToggle");
 const downloadArchive = document.querySelector("#downloadArchive");
 const clearCurrentPeriod = document.querySelector("#clearCurrentPeriod");
+const optimizeVideos = document.querySelector("#optimizeVideos");
 const optimizeStatus = document.querySelector("#optimizeStatus");
 const adminPanel = document.querySelector("#adminPanel");
 const photographerName = document.querySelector("#photographerName");
@@ -638,6 +639,12 @@ function renderStatusControls() {
     downloadArchive.textContent = "\u4e0b\u8f7d\u5f52\u6863";
   }
   if (clearCurrentPeriod) clearCurrentPeriod.hidden = !adminMode;
+  if (optimizeVideos) {
+    const ffmpegReady = systemInfo?.optimization?.videos !== false;
+    optimizeVideos.hidden = !adminMode;
+    optimizeVideos.disabled = !adminMode || !ffmpegReady;
+    optimizeVideos.title = ffmpegReady ? "" : "服务器未启用 ffmpeg，无法生成视频展示版";
+  }
   submitVote.disabled = !votingOpen || !voterName() || isSubmittingVote;
   submitVote.classList.toggle("is-loading", isSubmittingVote);
   submitVote.textContent = isSubmittingVote
@@ -1670,6 +1677,32 @@ if (clearCurrentPeriod) {
   });
 }
 
+if (optimizeVideos) {
+  optimizeVideos.addEventListener("click", async () => {
+    if (!adminMode) return;
+    if (!(await ensureSelectedPeriodActive())) return;
+    const label = currentPeriodName || currentPeriodId || "当前月份";
+    if (!confirm(`为 ${label} 的视频生成 720p 展示版？\n会从原视频转码，处理期间可继续使用，完成后播放更流畅。`)) return;
+    optimizeVideos.disabled = true;
+    try {
+      const result = await fetchJson("/api/admin/optimize-videos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminCode: adminCode.value.trim() })
+      });
+      await loadData();
+      if (result.queued > 0) {
+        showToast(`已加入 ${result.queued} 个视频转码，进度见上方"展示版处理中"`);
+      } else {
+        showToast("没有需要处理的视频，展示版已是最新");
+      }
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      optimizeVideos.disabled = false;
+    }
+  });
+}
 closePreview.addEventListener("click", closePreviewDialog);
 previewDialog.addEventListener("click", event => {
   if (event.target === previewDialog) closePreviewDialog();

@@ -28,7 +28,7 @@ const VIDEO_DISPLAY_WIDTH = Number(process.env.VIDEO_DISPLAY_WIDTH || 1280);
 const VIDEO_DISPLAY_HEIGHT = Number(process.env.VIDEO_DISPLAY_HEIGHT || 720);
 const VIDEO_DISPLAY_BITRATE = process.env.VIDEO_DISPLAY_BITRATE || "2200k";
 const VIDEO_DISPLAY_AUDIO_BITRATE = process.env.VIDEO_DISPLAY_AUDIO_BITRATE || "128k";
-const OPTIMIZE_CONCURRENCY = Math.max(1, Number(process.env.OPTIMIZE_CONCURRENCY || 1));
+const OPTIMIZE_CONCURRENCY = Math.max(1, Number(process.env.OPTIMIZE_CONCURRENCY || 2));
 const STORAGE_ENDPOINT = normalizeName(process.env.STORAGE_ENDPOINT);
 const STORAGE_BUCKET = normalizeName(process.env.STORAGE_BUCKET);
 const STORAGE_REGION = normalizeName(process.env.STORAGE_REGION || "auto");
@@ -1107,17 +1107,67 @@ function handleStatic(req, res) {
     return;
   }
 
-  fs.readFile(filePath, (error, data) => {
-    if (error) {
+  fs.stat(filePath, (error, stat) => {
+    if (error || !stat.isFile()) {
       sendText(res, 404, "Not found");
       return;
     }
+
+    const ext = path.extname(filePath).toLowerCase();
     const headers = { "Content-Type": contentTypeFor(filePath) };
-    if (!isUpload && [".html", ".js", ".css"].includes(path.extname(filePath).toLowerCase())) {
+    if (!isUpload && [".html", ".js", ".css"].includes(ext)) {
       headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+    } else if (isUpload) {
+      // Uploaded media is content-addressed (unique filename per upload), safe to cache hard.
+      headers["Cache-Control"] = "public, max-age=31536000, immutable";
     }
-    res.writeHead(200, headers);
-    res.end(data);
+
+    const total = stat.size;
+    // Advertise range support so browsers can seek/stream video instead of buffering the whole file.
+    headers["Accept-Ranges"] = "bytes";
+
+    const rangeHeader = req.headers.range;
+    let start = 0;
+    let end = total - 1;
+    let status = 200;
+
+    if (rangeHeader) {
+      const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim());
+      if (!match || (match[1] === "" && match[2] === "")) {
+        res.writeHead(416, { "Content-Range": `bytes */${total}` });
+        res.end();
+        return;
+      }
+      if (match[1] === "") {
+        // Suffix range: last N bytes.
+        const suffix = Number(match[2]);
+        start = suffix >= total ? 0 : total - suffix;
+        end = total - 1;
+      } else {
+        start = Number(match[1]);
+        end = match[2] === "" ? total - 1 : Math.min(Number(match[2]), total - 1);
+      }
+      if (start > end || start >= total) {
+        res.writeHead(416, { "Content-Range": `bytes */${total}` });
+        res.end();
+        return;
+      }
+      status = 206;
+      headers["Content-Range"] = `bytes ${start}-${end}/${total}`;
+    }
+
+    headers["Content-Length"] = end - start + 1;
+    res.writeHead(status, headers);
+
+    if (req.method === "HEAD") {
+      res.end();
+      return;
+    }
+
+    const stream = fs.createReadStream(filePath, { start, end });
+    stream.on("error", () => res.destroy());
+    res.on("close", () => stream.destroy());
+    stream.pipe(res);
   });
 }
 
