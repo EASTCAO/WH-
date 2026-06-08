@@ -24,6 +24,10 @@ const IMAGE_WEBP_EFFORT = Number(process.env.IMAGE_WEBP_EFFORT || 2);
 const IMAGE_OPTIMIZE_MIN_BYTES = Number(process.env.IMAGE_OPTIMIZE_MIN_MB || 4) * 1024 * 1024;
 const IMAGE_MAX_DIMENSION = Number(process.env.IMAGE_MAX_DIMENSION || 2200);
 const VIDEO_PRESET = process.env.VIDEO_PRESET || "veryfast";
+const VIDEO_DISPLAY_WIDTH = Number(process.env.VIDEO_DISPLAY_WIDTH || 1280);
+const VIDEO_DISPLAY_HEIGHT = Number(process.env.VIDEO_DISPLAY_HEIGHT || 720);
+const VIDEO_DISPLAY_BITRATE = process.env.VIDEO_DISPLAY_BITRATE || "2200k";
+const VIDEO_DISPLAY_AUDIO_BITRATE = process.env.VIDEO_DISPLAY_AUDIO_BITRATE || "128k";
 const OPTIMIZE_CONCURRENCY = Math.max(1, Number(process.env.OPTIMIZE_CONCURRENCY || 1));
 const STORAGE_ENDPOINT = normalizeName(process.env.STORAGE_ENDPOINT);
 const STORAGE_BUCKET = normalizeName(process.env.STORAGE_BUCKET);
@@ -413,6 +417,36 @@ function createPresignedPutUrl(key, contentType) {
   const url = new URL(`${endpoint.origin}${canonicalUri}`);
   url.search = params.toString();
   return { url: url.toString(), contentType };
+}
+
+async function putStorageObject(key, diskPath, contentType) {
+  if (!storageConfigured()) throw new Error("对象存储未配置");
+  const signed = createPresignedPutUrl(key, contentType);
+  const url = new URL(signed.url);
+  const stat = fs.statSync(diskPath);
+  await new Promise((resolve, reject) => {
+    const request = https.request(url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": signed.contentType,
+        "Content-Length": stat.size
+      }
+    }, response => {
+      let body = "";
+      response.setEncoding("utf8");
+      response.on("data", chunk => body += chunk);
+      response.on("end", () => {
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          resolve();
+          return;
+        }
+        reject(new Error(`对象存储上传展示版失败：${response.statusCode} ${body.slice(0, 200)}`));
+      });
+    });
+    request.on("error", reject);
+    fs.createReadStream(diskPath).on("error", reject).pipe(request);
+  });
+  return publicStorageUrl(key);
 }
 
 function parseSkuAndTitle(folderName) {
@@ -873,6 +907,15 @@ function processOptimizeQueue() {
 }
 
 async function optimizeMediaJob(job) {
+  if (job.storage === "object") {
+    await optimizeObjectMediaJob(job);
+    return;
+  }
+  if (!job.originalDiskPath) {
+    await markMediaOptimized(job.entryId, job.mediaId, null, "缺少原视频文件路径");
+    return;
+  }
+
   let displayDiskPath = job.originalDiskPath;
   try {
     displayDiskPath = await createOptimizedMedia(job.originalDiskPath, job.ext, job.mediaKind);
@@ -885,6 +928,32 @@ async function optimizeMediaJob(job) {
   const displayFilename = path.basename(displayDiskPath);
   await markMediaOptimized(job.entryId, job.mediaId, `/data/uploads/${job.entryId}/${displayFilename}`, "");
   console.log(`Background optimize finished: ${job.originalFilename}${optimized ? " -> " + displayFilename : ""}`);
+}
+
+async function optimizeObjectMediaJob(job) {
+  if (job.mediaKind !== "video" || !HAS_FFMPEG || !storageConfigured()) {
+    await markMediaOptimized(job.entryId, job.mediaId, null, "");
+    return;
+  }
+
+  const tempDir = path.join(UPLOAD_DIR, "_tmp", job.entryId);
+  fs.mkdirSync(tempDir, { recursive: true });
+  const inputPath = path.join(tempDir, `${job.mediaId}${job.ext || ".mp4"}`);
+  const displayPath = path.join(tempDir, `${job.mediaId}_display.mp4`);
+  try {
+    await downloadRemoteFile(job.originalSrc, inputPath);
+    await createOptimizedMedia(inputPath, job.ext || ".mp4", "video", displayPath);
+    const displayKey = createStorageObjectKey(job.periodId, job.entryId, `${path.basename(job.mediaId)}_display.mp4`);
+    const displayUrl = await putStorageObject(displayKey, displayPath, "video/mp4");
+    await markMediaOptimized(job.entryId, job.mediaId, displayUrl, "");
+    console.log(`Background video display finished: ${job.originalFilename} -> ${displayKey}`);
+  } catch (error) {
+    await markMediaOptimized(job.entryId, job.mediaId, null, error.message);
+    throw error;
+  } finally {
+    fs.rm(inputPath, { force: true }, () => {});
+    fs.rm(displayPath, { force: true }, () => {});
+  }
 }
 
 async function markMediaOptimized(entryId, mediaId, displaySrc, errorMessage) {
@@ -904,7 +973,7 @@ async function markMediaOptimized(entryId, mediaId, displaySrc, errorMessage) {
   });
 }
 
-async function createOptimizedMedia(sourcePath, ext, mediaKind) {
+async function createOptimizedMedia(sourcePath, ext, mediaKind, targetOverride = "") {
   if (mediaKind === "image") {
     const browserReadyTypes = new Set([".jpg", ".jpeg", ".jfif", ".png", ".webp", ".gif", ".avif"]);
     const fileSize = fs.statSync(sourcePath).size;
@@ -912,7 +981,7 @@ async function createOptimizedMedia(sourcePath, ext, mediaKind) {
       return sourcePath;
     }
 
-    const targetPath = sourcePath.slice(0, -ext.length) + "_display.webp";
+    const targetPath = targetOverride || sourcePath.slice(0, -ext.length) + "_display.webp";
     await sharp(sourcePath)
       .rotate()
       .resize({
@@ -927,16 +996,21 @@ async function createOptimizedMedia(sourcePath, ext, mediaKind) {
   }
 
   if (mediaKind === "video" && HAS_FFMPEG) {
-    const targetPath = sourcePath.slice(0, -ext.length) + "_display.mp4";
+    const targetPath = targetOverride || sourcePath.slice(0, -ext.length) + "_display.mp4";
     await runTool(FFMPEG_PATH, [
       "-y",
       "-i", sourcePath,
       "-map_metadata", "-1",
       "-c:v", "libx264",
       "-preset", VIDEO_PRESET,
-      "-crf", "20",
+      "-vf", `scale='min(${VIDEO_DISPLAY_WIDTH},iw)':'min(${VIDEO_DISPLAY_HEIGHT},ih)':force_original_aspect_ratio=decrease`,
+      "-b:v", VIDEO_DISPLAY_BITRATE,
+      "-maxrate", VIDEO_DISPLAY_BITRATE,
+      "-bufsize", "4400k",
+      "-profile:v", "main",
+      "-pix_fmt", "yuv420p",
       "-c:a", "aac",
-      "-b:a", "160k",
+      "-b:a", VIDEO_DISPLAY_AUDIO_BITRATE,
       "-movflags", "+faststart",
       targetPath
     ]);
@@ -944,6 +1018,40 @@ async function createOptimizedMedia(sourcePath, ext, mediaKind) {
   }
 
   return sourcePath;
+}
+
+function downloadRemoteFile(src, targetPath) {
+  return new Promise((resolve, reject) => {
+    const requestUrl = new URL(src);
+    const file = fs.createWriteStream(targetPath);
+    const request = https.get(requestUrl, response => {
+      if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+        response.resume();
+        file.close(() => {
+          fs.rm(targetPath, { force: true }, () => {});
+          downloadRemoteFile(new URL(response.headers.location, requestUrl).toString(), targetPath).then(resolve, reject);
+        });
+        return;
+      }
+      if (response.statusCode !== 200) {
+        response.resume();
+        file.close(() => fs.rm(targetPath, { force: true }, () => {}));
+        reject(new Error(`下载原视频失败：${response.statusCode}`));
+        return;
+      }
+      response.pipe(file);
+    });
+    request.on("error", error => {
+      file.close(() => fs.rm(targetPath, { force: true }, () => {}));
+      reject(error);
+    });
+    file.on("finish", () => file.close(resolve));
+    file.on("error", error => {
+      request.destroy();
+      file.close(() => fs.rm(targetPath, { force: true }, () => {}));
+      reject(error);
+    });
+  });
 }
 
 function handleStatic(req, res) {
@@ -1129,6 +1237,7 @@ async function handleStorageComplete(req, res) {
   const payload = await collectJson(req);
   const uploaded = Array.isArray(payload.files) ? payload.files : [];
   const grouped = new Map();
+  const optimizeJobs = [];
   let mediaTotal = 0;
   const dbSnapshot = readDb();
   const seenUploaderModules = new Set();
@@ -1154,22 +1263,71 @@ async function handleStorageComplete(req, res) {
         media: []
       });
     }
+    const mediaId = file.id || hash(`${file.entryId}|${file.publicUrl}`);
     grouped.get(key).media.push({
-      id: file.id || hash(`${file.entryId}|${file.publicUrl}`),
+      id: mediaId,
       src: file.publicUrl,
       originalSrc: file.publicUrl,
       kind: file.kind,
       name: file.name || path.basename(file.objectKey || file.publicUrl),
       optimized: false,
-      processing: false,
+      processing: file.kind === "video" && HAS_FFMPEG,
       storage: "object"
     });
+    if (file.kind === "video" && HAS_FFMPEG) {
+      optimizeJobs.push({
+        entryId: file.entryId,
+        mediaId,
+        originalSrc: file.publicUrl,
+        originalFilename: file.name || path.basename(file.objectKey || file.publicUrl),
+        objectKey: file.objectKey || "",
+        periodId: file.periodId || dbSnapshot.currentPeriodId,
+        mediaKind: "video",
+        ext: path.extname(file.name || file.objectKey || file.publicUrl).toLowerCase() || ".mp4",
+        storage: "object"
+      });
+    }
     mediaTotal += 1;
   }
 
   const groups = [...grouped.values()];
   await saveEntryMediaGroups(groups);
+  for (const job of optimizeJobs) queueMediaOptimization(job);
   sendJson(res, 200, { ok: true, entries: groups.length, media: mediaTotal });
+}
+
+async function handleVideoOptimize(req, res) {
+  const payload = await collectJson(req);
+  if (!isAdminPayload(payload)) return sendJson(res, 403, { error: "管理员口令不正确" });
+  if (!HAS_FFMPEG) return sendJson(res, 400, { error: "服务器未启用 ffmpeg，无法生成视频展示版" });
+
+  const db = readDb();
+  let queued = 0;
+  for (const entry of currentEntries(db)) {
+    for (const media of entry.media || []) {
+      if (media.kind !== "video") continue;
+      if (media.optimized && media.src && media.src !== media.originalSrc) continue;
+      if (media.processing) continue;
+      media.processing = true;
+      queued += 1;
+      queueMediaOptimization({
+        entryId: entry.id,
+        mediaId: media.id,
+        originalSrc: media.originalSrc || media.src,
+        originalFilename: media.name || `${entry.sku || entry.id}.mp4`,
+        objectKey: "",
+        periodId: entry.periodId || db.currentPeriodId,
+        mediaKind: "video",
+        ext: path.extname(media.name || media.originalSrc || media.src || ".mp4").toLowerCase() || ".mp4",
+        storage: /^https?:\/\//i.test(media.originalSrc || media.src || "") ? "object" : "local",
+        originalDiskPath: media.originalSrc?.startsWith("/data/uploads/")
+          ? path.join(UPLOAD_DIR, decodeURIComponent(media.originalSrc.slice("/data/uploads/".length)))
+          : ""
+      });
+    }
+  }
+  writeDb(db);
+  sendJson(res, 200, { ok: true, queued, queue: optimizeQueueState() });
 }
 
 async function saveEntryMediaGroups(groups) {
@@ -1502,7 +1660,13 @@ function handleApi(req, res) {
         images: true,
         videos: HAS_FFMPEG,
         imageMode: "小图直接展示，大图生成WebP展示版，保留原图",
-        videoMode: HAS_FFMPEG ? "MP4展示版，保留原视频" : "未启用：未检测到 ffmpeg"
+        videoMode: HAS_FFMPEG ? "MP4展示版，保留原视频" : "未启用：未检测到 ffmpeg",
+        videoDisplay: {
+          width: VIDEO_DISPLAY_WIDTH,
+          height: VIDEO_DISPLAY_HEIGHT,
+          bitrate: VIDEO_DISPLAY_BITRATE,
+          audioBitrate: VIDEO_DISPLAY_AUDIO_BITRATE
+        }
       }
     });
     return;
@@ -1601,6 +1765,11 @@ function handleApi(req, res) {
 
   if (req.method === "POST" && url.pathname === "/api/storage/complete") {
     handleStorageComplete(req, res).catch(error => sendJson(res, 400, { error: error.message }));
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/admin/optimize-videos") {
+    handleVideoOptimize(req, res).catch(error => sendJson(res, 400, { error: error.message }));
     return;
   }
 
