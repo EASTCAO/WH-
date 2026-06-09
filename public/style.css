@@ -3625,8 +3625,15 @@ body {
 }
 
 .admin-controls {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
+  min-height: 0;
+}
+
+.admin-controls::before {
+  flex-basis: 100%;
 }
 
 .admin-controls button,
@@ -3638,6 +3645,25 @@ body {
   font-size: 12px;
   font-weight: 700;
   box-shadow: none;
+}
+
+.admin-controls button {
+  width: auto;
+  padding: 0 14px;
+  border: 1px solid #e7e5df;
+  background: #f7f7f4;
+  color: #202124;
+}
+
+.admin-controls .status-toggle {
+  border-color: #202124;
+  background: #202124;
+  color: #ffffff;
+}
+
+.admin-controls #clearCurrentPeriod {
+  margin-left: auto;
+  color: #b42318;
 }
 
 .status-toggle {
