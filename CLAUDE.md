@@ -72,3 +72,11 @@ Images → `sharp` (resize to `IMAGE_MAX_DIMENSION`, WebP). Videos → bundled `
 ## Deploy
 
 Targets **Zeabur** (Node ≥20). Production needs `ADMIN_CODE` and `DATA_DIR=/data` (mounted persistent volume `photo-review-data`). Optional R2 direct-upload needs the `STORAGE_*` vars + bucket CORS allowing `PUT`. Full deploy + env-var reference is in `README-上线.md`.
+
+**`git push` does NOT deploy.** The live service (`whsj-photo-review.zeabur.app`) is not bound to the GitHub repo, so pushing only updates history — the live site is unchanged. Shipping is a **local CLI upload from the working dir**:
+
+```bash
+zeabur deploy --service-id 6a1e68b5a853e9fa73f093e3 --environment-id 6a1e67ddb0fc054c4cc40683 -i=false
+```
+
+`.zeaburignore` keeps the upload from clobbering the `/data` volume (it excludes `data/db.json`, `data/uploads/`, restore artifacts, and one-off scripts). Build takes ~75s (sharp + ffmpeg-static). **Verify the deploy went live** by polling the public `https://whsj-photo-review.zeabur.app/api/system` — don't assume success from the CLI alone; edge caching can serve stale assets for a bit.

@@ -688,18 +688,18 @@ function renderOptimizeStatus() {
   const pending = Number(queue.pending || 0);
   const active = Number(queue.active || 0);
   const total = pending + active;
-  optimizeStatus.classList.toggle("is-complete", total === 0);
-  optimizeStatus.classList.toggle("is-working", total > 0);
-  optimizeStatus.innerHTML = total > 0
-    ? `
+  // 只在有视频正在转码时显示进度条；空闲（全部处理完成）时隐藏，避免常驻占位
+  if (total === 0) {
+    optimizeStatus.hidden = true;
+    optimizeStatus.classList.remove("is-working");
+    optimizeStatus.innerHTML = "";
+    return;
+  }
+  optimizeStatus.classList.add("is-working");
+  optimizeStatus.innerHTML = `
       <span class="optimize-dot" aria-hidden="true"></span>
       <strong>展示版处理中</strong>
       <span>正在处理 ${active} 个，还剩 ${pending} 个</span>
-    `
-    : `
-      <span class="optimize-dot" aria-hidden="true"></span>
-      <strong>全部处理完成</strong>
-      <span>可以通知摄影师开始查看和投票</span>
     `;
 }
 
