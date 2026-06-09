@@ -3625,21 +3625,21 @@ body {
 }
 
 .admin-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
+  gap: 8px;
   min-height: 0;
 }
 
 .admin-controls::before {
-  flex-basis: 100%;
+  grid-column: 1 / -1;
 }
 
 .admin-controls button,
 .period-controls button,
 .photographer-tools button {
-  height: 28px;
+  height: 32px;
   border-radius: 7px;
   padding: 0 8px;
   font-size: 12px;
@@ -3648,8 +3648,7 @@ body {
 }
 
 .admin-controls button {
-  width: auto;
-  padding: 0 14px;
+  width: 100%;
   border: 1px solid #e7e5df;
   background: #f7f7f4;
   color: #202124;
@@ -3662,7 +3661,6 @@ body {
 }
 
 .admin-controls #clearCurrentPeriod {
-  margin-left: auto;
   color: #b42318;
 }
 
