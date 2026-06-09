@@ -1441,7 +1441,7 @@ async function handleVideoOptimize(req, res) {
     for (const media of entry.media || []) {
       if (media.kind !== "video") continue;
       if (!force && media.optimized && media.src && media.src !== media.originalSrc) continue;
-      if (media.processing) continue;
+      if (!force && media.processing) continue;
       media.processing = true;
       queued += 1;
       queueMediaOptimization({
@@ -1512,7 +1512,7 @@ async function handleImageOptimize(req, res) {
     for (const media of entry.media || []) {
       if (media.kind !== "image") continue;
       if (!force && media.optimized && media.src && media.src !== media.originalSrc) continue;
-      if (media.processing) continue;
+      if (!force && media.processing) continue;
       const source = media.originalSrc || media.src || "";
       if (!/^https?:\/\//i.test(source)) continue;
       media.processing = true;
