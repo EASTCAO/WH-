@@ -1456,6 +1456,42 @@ async function handleVideoOptimize(req, res) {
   sendJson(res, 200, { ok: true, queued, queue: optimizeQueueState() });
 }
 
+async function handleMigrateMediaUrls(req, res) {
+  const payload = await collectJson(req);
+  if (!isAdminPayload(payload)) return sendJson(res, 403, { error: "管理员口令不正确" });
+  const from = normalizeName(payload.from).replace(/\/+$/, "");
+  const to = normalizeName(payload.to).replace(/\/+$/, "");
+  if (!from || !to) return sendJson(res, 400, { error: "缺少 from 或 to 基础 URL" });
+  if (!/^https?:\/\//i.test(from) || !/^https?:\/\//i.test(to)) {
+    return sendJson(res, 400, { error: "from/to 必须是完整的 http(s) URL" });
+  }
+
+  let entriesTouched = 0;
+  let urlsReplaced = 0;
+  const dryRun = Boolean(payload.dryRun);
+
+  await withDbWriteLock(async () => {
+    const db = readDb();
+    for (const entry of db.entries || []) {
+      let entryChanged = false;
+      for (const media of entry.media || []) {
+        for (const field of ["src", "originalSrc"]) {
+          const value = media[field];
+          if (typeof value === "string" && value.startsWith(from + "/")) {
+            if (!dryRun) media[field] = to + value.slice(from.length);
+            urlsReplaced += 1;
+            entryChanged = true;
+          }
+        }
+      }
+      if (entryChanged) entriesTouched += 1;
+    }
+    if (!dryRun) writeDb(db);
+  });
+
+  sendJson(res, 200, { ok: true, dryRun, from, to, entriesTouched, urlsReplaced });
+}
+
 async function handleImageOptimize(req, res) {
   const payload = await collectJson(req);
   if (!isAdminPayload(payload)) return sendJson(res, 403, { error: "管理员口令不正确" });
@@ -1937,6 +1973,11 @@ function handleApi(req, res) {
 
   if (req.method === "POST" && url.pathname === "/api/admin/optimize-images") {
     handleImageOptimize(req, res).catch(error => sendJson(res, 400, { error: error.message }));
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/admin/migrate-media-urls") {
+    handleMigrateMediaUrls(req, res).catch(error => sendJson(res, 400, { error: error.message }));
     return;
   }
 
