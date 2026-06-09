@@ -883,13 +883,13 @@ function renderImageViewer() {
   viewerTitle.textContent = entryTitle(previewEntry);
   viewerMeta.textContent = `${entryMeta(previewEntry)} · ${viewerIndex + 1}/${previewEntry.media.length}`;
   viewerStage.innerHTML = item.kind === "video"
-    ? `<video class="viewer-media" src="${item.src}" controls autoplay playsinline preload="metadata"></video><a class="viewer-open-original" href="${item.src}" target="_blank" rel="noopener">新窗口打开视频</a>`
+    ? `<video class="viewer-media" src="${item.src}" controls autoplay playsinline preload="metadata"></video>`
     : `<img class="viewer-media" src="${item.src}" alt="${entryTitle(previewEntry)} 第 ${viewerIndex + 1} 张">`;
   const media = viewerMedia();
   media?.addEventListener("error", () => {
     viewerStage.classList.add("is-error");
     if (!viewerStage.querySelector(".viewer-load-error")) {
-      viewerStage.insertAdjacentHTML("beforeend", `<div class="viewer-load-error">文件加载失败，可以点击下方按钮打开原文件。</div>`);
+      viewerStage.insertAdjacentHTML("beforeend", `<div class="viewer-load-error">文件加载失败，可以<a href="${item.src}" target="_blank" rel="noopener">点击这里打开原文件</a>。</div>`);
     }
   });
   media?.addEventListener("loadeddata", () => viewerStage.classList.remove("is-error"));
