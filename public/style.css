@@ -3696,10 +3696,14 @@ body {
 #adminToggle.admin-exit {
   flex: 0 0 auto;
   position: fixed;
-  top: 18px;
+  top: 19px;
   right: 28px;
   z-index: 60;
-  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 68px;
+  height: 34px;
   border: 1px solid #e7e5df;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.9);
@@ -4112,6 +4116,9 @@ body[data-theme="dark"] .app-toast {
   #adminToggle.admin-exit {
     top: 14px;
     right: 16px;
+    min-width: 64px;
+    height: 32px;
+    padding: 0 10px;
   }
 }
 
