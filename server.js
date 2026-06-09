@@ -380,30 +380,33 @@ function publicStorageUrl(key) {
   return `${STORAGE_PUBLIC_BASE_URL.replace(/\/+$/, "")}/${encodeS3Key(key)}`;
 }
 
-function createPresignedPutUrl(key, contentType) {
+function createPresignedPutUrl(key, contentType, cacheControl) {
   const endpoint = new URL(STORAGE_ENDPOINT);
   const host = endpoint.host;
   const canonicalUri = `/${encodeS3PathSegment(STORAGE_BUCKET)}/${encodeS3Key(key)}`;
   const { amzDate, dateStamp } = s3Date();
   const credentialScope = `${dateStamp}/${STORAGE_REGION}/s3/aws4_request`;
   const credential = `${STORAGE_ACCESS_KEY_ID}/${credentialScope}`;
+  // 若带 cacheControl，则把它纳入签名头（R2 才会存为对象元数据并在 GET 时返回）
+  const signedHeaderNames = cacheControl ? ["cache-control", "host"] : ["host"];
   const params = new URLSearchParams({
     "X-Amz-Algorithm": "AWS4-HMAC-SHA256",
     "X-Amz-Credential": credential,
     "X-Amz-Date": amzDate,
     "X-Amz-Expires": "900",
-    "X-Amz-SignedHeaders": "host"
+    "X-Amz-SignedHeaders": signedHeaderNames.join(";")
   });
   const canonicalQuery = [...params.entries()]
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
     .sort()
     .join("&");
+  const canonicalHeaders = (cacheControl ? `cache-control:${cacheControl}\n` : "") + `host:${host}\n`;
   const canonicalRequest = [
     "PUT",
     canonicalUri,
     canonicalQuery,
-    `host:${host}\n`,
-    "host",
+    canonicalHeaders,
+    signedHeaderNames.join(";"),
     "UNSIGNED-PAYLOAD"
   ].join("\n");
   const stringToSign = [
@@ -416,12 +419,13 @@ function createPresignedPutUrl(key, contentType) {
   params.set("X-Amz-Signature", signature);
   const url = new URL(`${endpoint.origin}${canonicalUri}`);
   url.search = params.toString();
-  return { url: url.toString(), contentType };
+  return { url: url.toString(), contentType, cacheControl };
 }
 
 async function putStorageObject(key, diskPath, contentType) {
   if (!storageConfigured()) throw new Error("对象存储未配置");
-  const signed = createPresignedPutUrl(key, contentType);
+  const cacheControl = "public, max-age=31536000, immutable";
+  const signed = createPresignedPutUrl(key, contentType, cacheControl);
   const url = new URL(signed.url);
   const stat = fs.statSync(diskPath);
   await new Promise((resolve, reject) => {
@@ -429,6 +433,7 @@ async function putStorageObject(key, diskPath, contentType) {
       method: "PUT",
       headers: {
         "Content-Type": signed.contentType,
+        "Cache-Control": cacheControl,
         "Content-Length": stat.size
       }
     }, response => {
@@ -1499,12 +1504,14 @@ async function handleImageOptimize(req, res) {
   const payload = await collectJson(req);
   if (!isAdminPayload(payload)) return sendJson(res, 403, { error: "管理员口令不正确" });
 
+  const force = Boolean(payload.force);
   const db = readDb();
+  const targetEntries = force ? (db.entries || []) : currentEntries(db);
   let queued = 0;
-  for (const entry of currentEntries(db)) {
+  for (const entry of targetEntries) {
     for (const media of entry.media || []) {
       if (media.kind !== "image") continue;
-      if (media.optimized && media.src && media.src !== media.originalSrc) continue;
+      if (!force && media.optimized && media.src && media.src !== media.originalSrc) continue;
       if (media.processing) continue;
       const source = media.originalSrc || media.src || "";
       if (!/^https?:\/\//i.test(source)) continue;
@@ -1523,7 +1530,7 @@ async function handleImageOptimize(req, res) {
     }
   }
   writeDb(db);
-  sendJson(res, 200, { ok: true, queued, queue: optimizeQueueState() });
+  sendJson(res, 200, { ok: true, force, queued, queue: optimizeQueueState() });
 }
 
 async function saveEntryMediaGroups(groups) {
