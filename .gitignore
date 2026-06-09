@@ -9,3 +9,9 @@ Thumbs.db
 data/db.json
 data/uploads/
 data/backups/
+data/restore-*.json
+data/backup-*.json
+data/online-backup-*.json
+
+# pasted screenshots / scratch images
+image.png
