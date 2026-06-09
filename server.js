@@ -26,7 +26,7 @@ const IMAGE_MAX_DIMENSION = Number(process.env.IMAGE_MAX_DIMENSION || 2200);
 const VIDEO_PRESET = process.env.VIDEO_PRESET || "veryfast";
 const VIDEO_DISPLAY_WIDTH = Number(process.env.VIDEO_DISPLAY_WIDTH || 1280);
 const VIDEO_DISPLAY_HEIGHT = Number(process.env.VIDEO_DISPLAY_HEIGHT || 720);
-const VIDEO_DISPLAY_BITRATE = process.env.VIDEO_DISPLAY_BITRATE || "2200k";
+const VIDEO_DISPLAY_BITRATE = process.env.VIDEO_DISPLAY_BITRATE || "1200k";
 const VIDEO_DISPLAY_AUDIO_BITRATE = process.env.VIDEO_DISPLAY_AUDIO_BITRATE || "128k";
 const OPTIMIZE_CONCURRENCY = Math.max(1, Number(process.env.OPTIMIZE_CONCURRENCY || 2));
 const STORAGE_ENDPOINT = normalizeName(process.env.STORAGE_ENDPOINT);
@@ -1427,12 +1427,15 @@ async function handleVideoOptimize(req, res) {
   if (!isAdminPayload(payload)) return sendJson(res, 403, { error: "管理员口令不正确" });
   if (!HAS_FFMPEG) return sendJson(res, 400, { error: "服务器未启用 ffmpeg，无法生成视频展示版" });
 
+  const force = Boolean(payload.force);
   const db = readDb();
+  // force 时遍历所有期(重转历史视频),否则只处理当前期
+  const targetEntries = force ? (db.entries || []) : currentEntries(db);
   let queued = 0;
-  for (const entry of currentEntries(db)) {
+  for (const entry of targetEntries) {
     for (const media of entry.media || []) {
       if (media.kind !== "video") continue;
-      if (media.optimized && media.src && media.src !== media.originalSrc) continue;
+      if (!force && media.optimized && media.src && media.src !== media.originalSrc) continue;
       if (media.processing) continue;
       media.processing = true;
       queued += 1;
@@ -1453,7 +1456,7 @@ async function handleVideoOptimize(req, res) {
     }
   }
   writeDb(db);
-  sendJson(res, 200, { ok: true, queued, queue: optimizeQueueState() });
+  sendJson(res, 200, { ok: true, force, queued, queue: optimizeQueueState() });
 }
 
 async function handleMigrateMediaUrls(req, res) {
