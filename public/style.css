@@ -5894,12 +5894,13 @@ body:not(.is-admin) .layout-main {
 }
 
 body:not(.is-admin) .layout-main .welcome-panel {
-  grid-column: 1 / -1;
+  grid-column: 2;
+  grid-row: 1;
 }
 
 body:not(.is-admin) .layout-main .module-board {
   grid-column: 1;
-  grid-row: 2 / span 5;
+  grid-row: 1 / span 5;
   position: sticky;
   top: 92px;
 }
@@ -6386,14 +6387,14 @@ body:not(.is-admin) .layout-main .welcome-panel {
   min-height: 46px !important;
   margin: 0 !important;
   padding: 8px 16px !important;
-  border-bottom: 1px solid var(--ui-line) !important;
+  border-bottom: 0 !important;
 }
 
 body:not(.is-admin) .layout-main .module-board {
   align-self: stretch;
   min-height: calc(100vh - 170px);
   margin: 0 !important;
-  padding: 16px 12px !important;
+  padding: 18px 12px !important;
   border-right: 1px solid var(--ui-line) !important;
   background: rgba(251, 251, 248, 0.72) !important;
 }
@@ -6407,7 +6408,7 @@ body:not(.is-admin) .layout-main .vote-toolbar {
   position: static !important;
   top: auto !important;
   margin: 0 !important;
-  padding: 16px 18px !important;
+  padding: 12px 18px 16px !important;
   border-bottom: 1px solid var(--ui-line) !important;
   background: rgba(255, 255, 255, 0.92) !important;
   backdrop-filter: blur(16px);
@@ -6452,6 +6453,59 @@ body[data-theme="dark"]:not(.is-admin) .photographer-result-card {
   border-color: rgba(185, 217, 201, 0.26);
 }
 
+body[data-theme="dark"]:not(.is-admin) .layout-main .vote-toolbar {
+  background: rgba(23, 28, 25, 0.92) !important;
+}
+
+/* Photographer layout: left navigation separated, right status and vote header merged. */
+body:not(.is-admin) .layout-main .welcome-panel,
+body:not(.is-admin) .layout-main .vote-toolbar {
+  background: rgba(255, 255, 255, 0.9) !important;
+}
+
+body:not(.is-admin) .layout-main .welcome-panel {
+  padding: 15px 18px 6px !important;
+}
+
+body:not(.is-admin) .layout-main .welcome-panel > div {
+  min-height: 34px !important;
+}
+
+body:not(.is-admin) .layout-main .vote-toolbar {
+  align-items: center !important;
+  border-bottom: 1px solid var(--ui-line) !important;
+}
+
+body:not(.is-admin) .layout-main .vote-toolbar > div {
+  display: grid;
+  gap: 4px;
+}
+
+body:not(.is-admin) .layout-main .vote-toolbar strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px !important;
+}
+
+body:not(.is-admin) .layout-main .vote-toolbar.is-completed strong::after {
+  content: "已提交";
+  min-height: 22px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--ui-accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+body:not(.is-admin) .layout-main .module-board {
+  border-right: 1px solid rgba(32, 37, 34, 0.12) !important;
+}
+
+body[data-theme="dark"]:not(.is-admin) .layout-main .welcome-panel,
 body[data-theme="dark"]:not(.is-admin) .layout-main .vote-toolbar {
   background: rgba(23, 28, 25, 0.92) !important;
 }
