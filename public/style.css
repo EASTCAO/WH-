@@ -5907,6 +5907,7 @@ body:not(.is-admin) .layout-main .module-board {
 
 body:not(.is-admin) .layout-main .vote-toolbar,
 body:not(.is-admin) .layout-main .gallery,
+body:not(.is-admin) .layout-main .submit-zone,
 body:not(.is-admin) .layout-main .tiebreaker-panel,
 body:not(.is-admin) .layout-main .results-panel {
   grid-column: 2;
@@ -6025,6 +6026,7 @@ body:not(.is-admin) .layout-main .module-board .section-heading span {
   body:not(.is-admin) .layout-main .module-board,
   body:not(.is-admin) .layout-main .vote-toolbar,
   body:not(.is-admin) .layout-main .gallery,
+  body:not(.is-admin) .layout-main .submit-zone,
   body:not(.is-admin) .layout-main .tiebreaker-panel,
   body:not(.is-admin) .layout-main .results-panel {
     grid-column: 1;
@@ -6417,9 +6419,18 @@ body:not(.is-admin) .layout-main .vote-toolbar {
 body:not(.is-admin) .layout-main .gallery {
   min-height: 176px;
   margin: 0 !important;
-  padding: 18px !important;
+  padding: 18px 18px 10px !important;
   background: transparent !important;
   border-radius: 0 !important;
+}
+
+body:not(.is-admin) .layout-main .submit-zone {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 !important;
+  padding: 0 18px 18px !important;
+  border-bottom: 1px solid var(--ui-line) !important;
+  background: transparent !important;
 }
 
 body:not(.is-admin) .layout-main .gallery-drop-zone {
@@ -6473,7 +6484,7 @@ body:not(.is-admin) .layout-main .welcome-panel > div {
 
 body:not(.is-admin) .layout-main .vote-toolbar {
   align-items: center !important;
-  border-bottom: 1px solid var(--ui-line) !important;
+  border-bottom: 0 !important;
 }
 
 body:not(.is-admin) .layout-main .vote-toolbar > div {
@@ -6687,6 +6698,14 @@ body.is-admin .layout-main .vote-toolbar {
 body.is-admin .layout-main .gallery {
   min-height: 190px !important;
   padding: 20px !important;
+}
+
+body.is-admin .layout-main .submit-zone {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 20px 18px !important;
+  border-bottom: 1px solid var(--ui-line) !important;
+  background: transparent !important;
 }
 
 body.is-admin .layout-main .gallery-drop-zone {
