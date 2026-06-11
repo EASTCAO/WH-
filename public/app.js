@@ -101,6 +101,7 @@ const votingStatusSummary = document.querySelector("#votingStatusSummary");
 const votingStatusList = document.querySelector("#votingStatusList");
 const ballotAdmin = document.querySelector("#ballotAdmin");
 const ballotList = document.querySelector("#ballotList");
+const resultsPreviewAdmin = document.querySelector("#resultsPreviewAdmin");
 const periodAdmin = document.querySelector("#periodAdmin");
 const periodStatus = document.querySelector("#periodStatus");
 const periodSelect = document.querySelector("#periodSelect");
@@ -725,10 +726,36 @@ function bindDialogVoterPills() {
 function openAdminInfoDialog(title, contentNode, options = {}) {
   if (!adminInfoDialog || !adminInfoTitle || !adminInfoBody || !contentNode) return;
   adminInfoTitle.textContent = title;
+  adminInfoDialog.classList.toggle("wide", Boolean(options.wide));
   adminInfoBody.innerHTML = "";
   adminInfoBody.appendChild(contentNode.cloneNode(true));
   if (!adminInfoDialog.open) adminInfoDialog.showModal();
   if (options.interactiveVoters) bindDialogVoterPills();
+  if (options.resultsPreview) bindResultPreviewActions(adminInfoBody);
+}
+
+function bindResultPreviewActions(root = resultsBox) {
+  root?.querySelectorAll(".create-tiebreaker").forEach(button => {
+    button.addEventListener("click", () => {
+      createTiebreaker(button.dataset.module, String(button.dataset.entryIds || "").split(",").filter(Boolean));
+    });
+  });
+}
+
+function openResultsPreviewDialog() {
+  if (!resultsBox) return;
+  const wrapper = document.createElement("div");
+  wrapper.className = "admin-results-preview";
+  if (resultsNote) {
+    const note = document.createElement("p");
+    note.className = "muted";
+    note.textContent = resultsNote.textContent;
+    wrapper.appendChild(note);
+  }
+  const resultsClone = resultsBox.cloneNode(true);
+  resultsClone.removeAttribute("id");
+  wrapper.appendChild(resultsClone);
+  openAdminInfoDialog("后台票数预览", wrapper, { wide: true, resultsPreview: true });
 }
 
 function nextPeriodLabelFromCurrent() {
@@ -750,7 +777,8 @@ function bindAdminInfoCards() {
   [
     { detail: moduleVotersAdmin, title: "投票名单分组", content: moduleVotersList, interactiveVoters: true },
     { detail: votingStatusAdmin, title: "投票进度", content: votingStatusList, extra: votingStatusSummary },
-    { detail: ballotAdmin, title: "投票记录", content: ballotList }
+    { detail: ballotAdmin, title: "投票记录", content: ballotList },
+    { detail: resultsPreviewAdmin, customOpen: openResultsPreviewDialog }
   ].forEach(item => {
     if (!item.detail || item.detail.dataset.dialogBound) return;
     item.detail.dataset.dialogBound = "1";
@@ -760,6 +788,10 @@ function bindAdminInfoCards() {
     item.detail.addEventListener("click", event => {
       if (!adminMode) return;
       event.preventDefault();
+      if (item.customOpen) {
+        item.customOpen();
+        return;
+      }
       if (item.extra) {
         const wrapper = document.createElement("div");
         wrapper.appendChild(item.extra.cloneNode(true));
@@ -853,6 +885,14 @@ function renderWelcome() {
     welcomeText.innerHTML = votingOpen
       ? `<span>登录后投票</span><span>匿名展示</span>`
       : `<span>${totalWorks} 个作品</span><span>等待开票</span>`;
+  }
+  if (adminMode) {
+    const periodLabel = currentPeriodName || currentPeriodId || "当前评优";
+    welcomeText.innerHTML = `
+      <span>${escapeHtml(periodLabel)}</span>
+      <span>${totalWorks} 套作品</span>
+      <span>${modules.length} 个模块</span>
+    `;
   }
 }
 
@@ -1287,7 +1327,8 @@ async function submitTiebreakerVote(tiebreakerId) {
 function renderResults() {
   const hasResultEntries = results.some(entry => entry.mediaCount > 0 || entry.votes > 0 || entry.sku);
   const canViewResults = adminMode || (resultsPublished && hasResultEntries);
-  if (resultsPanel) resultsPanel.hidden = !canViewResults;
+  if (resultsPanel) resultsPanel.hidden = adminMode || !canViewResults;
+  if (resultsPreviewAdmin) resultsPreviewAdmin.hidden = !adminMode;
   if (!canViewResults) return;
 
   resultsTitle.textContent = resultsPublished ? "最终评优结果" : (adminMode ? "后台票数预览" : "最终结果");
@@ -1353,11 +1394,7 @@ function renderResults() {
       </section>
     `;
   }).join("");
-  resultsBox.querySelectorAll(".create-tiebreaker").forEach(button => {
-    button.addEventListener("click", () => {
-      createTiebreaker(button.dataset.module, String(button.dataset.entryIds || "").split(",").filter(Boolean));
-    });
-  });
+  bindResultPreviewActions(resultsBox);
 }
 
 function renderResultDialog() {

@@ -3631,7 +3631,8 @@ body {
 .layout-side .photographer-admin,
 .layout-side .module-voters-admin,
 .layout-side .voting-status-admin,
-.layout-side .ballot-admin {
+.layout-side .ballot-admin,
+.layout-side .results-preview-admin {
   min-height: 0;
   padding: 12px;
   border: 1px solid #edf0f3;
@@ -4199,6 +4200,7 @@ body[data-theme="dark"] .photographer-admin,
 body[data-theme="dark"] .ballot-admin,
 body[data-theme="dark"] .module-voters-admin,
 body[data-theme="dark"] .voting-status-admin,
+body[data-theme="dark"] .results-preview-admin,
 body[data-theme="dark"] .preview-dialog,
 body[data-theme="dark"] .result-dialog,
 body[data-theme="dark"] .preview-shell,
@@ -5510,7 +5512,8 @@ main {
 .layout-side .photographer-admin,
 .layout-side .module-voters-admin,
 .layout-side .voting-status-admin,
-.layout-side .ballot-admin {
+.layout-side .ballot-admin,
+.layout-side .results-preview-admin {
   border-color: var(--ui-line) !important;
   border-radius: 12px !important;
   background: var(--ui-surface-soft) !important;
@@ -6123,7 +6126,8 @@ body.is-admin #createNextPeriod::before {
 
 body.is-admin .module-voters-admin,
 body.is-admin .voting-status-admin,
-body.is-admin .ballot-admin {
+body.is-admin .ballot-admin,
+body.is-admin .results-preview-admin {
   cursor: pointer;
   padding: 0 !important;
   overflow: hidden;
@@ -6131,7 +6135,8 @@ body.is-admin .ballot-admin {
 
 body.is-admin .module-voters-admin summary,
 body.is-admin .voting-status-admin summary,
-body.is-admin .ballot-admin summary {
+body.is-admin .ballot-admin summary,
+body.is-admin .results-preview-admin summary {
   height: 50px;
   display: flex !important;
   align-items: center;
@@ -6143,7 +6148,8 @@ body.is-admin .ballot-admin summary {
 
 body.is-admin .module-voters-admin summary::after,
 body.is-admin .voting-status-admin summary::after,
-body.is-admin .ballot-admin summary::after {
+body.is-admin .ballot-admin summary::after,
+body.is-admin .results-preview-admin summary::after {
   content: "+";
   color: var(--ui-text-soft);
   font-size: 17px;
@@ -6152,7 +6158,8 @@ body.is-admin .ballot-admin summary::after {
 
 body.is-admin .module-voters-admin > :not(summary),
 body.is-admin .voting-status-admin > :not(summary),
-body.is-admin .ballot-admin > :not(summary) {
+body.is-admin .ballot-admin > :not(summary),
+body.is-admin .results-preview-admin > :not(summary) {
   display: none !important;
 }
 
@@ -6163,6 +6170,10 @@ body.is-admin .ballot-admin > :not(summary) {
   border: 0;
   border-radius: 16px;
   background: transparent;
+}
+
+.admin-info-dialog.wide {
+  width: min(1180px, calc(100vw - 36px));
 }
 
 .admin-info-dialog::backdrop {
@@ -6237,6 +6248,15 @@ body.is-admin .ballot-admin > :not(summary) {
 
 .admin-info-body .ballot-row {
   grid-template-columns: 120px 110px minmax(0, 1fr) auto;
+}
+
+.admin-results-preview .muted {
+  margin: 0 0 14px;
+}
+
+.admin-results-preview .results {
+  display: grid;
+  gap: 14px;
 }
 
 .dialog-actions {
@@ -6396,5 +6416,224 @@ body[data-theme="dark"]:not(.is-admin) .layout-main .vote-toolbar {
     min-height: 0;
     border-right: 0 !important;
     border-bottom: 1px solid var(--ui-line) !important;
+  }
+}
+
+/* Admin workspace polish: one calm surface instead of several floating cards. */
+body.is-admin .layout-grid {
+  gap: 18px !important;
+  align-items: start !important;
+}
+
+body.is-admin .layout-side {
+  width: 228px;
+}
+
+body.is-admin .layout-side .admin-panel {
+  gap: 0 !important;
+  padding: 0 !important;
+  border: 1px solid var(--ui-line) !important;
+  border-radius: 16px !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 18px 46px rgba(40, 43, 38, 0.06) !important;
+  overflow: hidden;
+}
+
+body.is-admin .admin-panel-head {
+  padding: 16px 14px 12px !important;
+  border-bottom: 1px solid var(--ui-line) !important;
+}
+
+body.is-admin .layout-side .admin-controls,
+body.is-admin .layout-side .period-admin,
+body.is-admin .layout-side .photographer-admin,
+body.is-admin .layout-side .module-voters-admin,
+body.is-admin .layout-side .voting-status-admin,
+body.is-admin .layout-side .ballot-admin,
+body.is-admin .layout-side .results-preview-admin {
+  margin: 0 !important;
+  padding: 12px 13px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--ui-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.is-admin .layout-side .results-preview-admin {
+  border-bottom: 0 !important;
+}
+
+body.is-admin .layout-side .admin-controls {
+  gap: 8px !important;
+}
+
+body.is-admin .layout-side .admin-controls::before {
+  margin-bottom: 2px !important;
+  color: var(--ui-text-soft) !important;
+  font-size: 12px !important;
+}
+
+body.is-admin .layout-side .admin-controls button,
+body.is-admin .layout-side .admin-controls input {
+  height: 32px !important;
+  border-radius: 8px !important;
+}
+
+body.is-admin .period-admin h3 {
+  margin: 0 0 8px !important;
+}
+
+body.is-admin .module-voters-admin summary,
+body.is-admin .voting-status-admin summary,
+body.is-admin .ballot-admin summary,
+body.is-admin .results-preview-admin summary {
+  height: 32px !important;
+  padding: 0 !important;
+  font-size: 13px !important;
+}
+
+body.is-admin .layout-main {
+  gap: 0 !important;
+  padding: 0 !important;
+  border: 1px solid var(--ui-line) !important;
+  border-radius: 16px !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  box-shadow: 0 20px 58px rgba(40, 43, 38, 0.06) !important;
+  overflow: hidden;
+}
+
+body.is-admin .layout-main > * {
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.is-admin .layout-main .welcome-panel {
+  min-height: 74px !important;
+  padding: 16px 18px !important;
+  border-bottom: 1px solid var(--ui-line) !important;
+}
+
+body.is-admin .layout-main .welcome-panel > div {
+  min-height: 42px !important;
+  display: grid !important;
+  grid-template-columns: auto minmax(180px, 1fr) auto !important;
+  gap: 12px 14px !important;
+  align-items: center !important;
+}
+
+body.is-admin .layout-main .welcome-panel h2 {
+  font-size: 16px !important;
+  line-height: 1.25 !important;
+}
+
+body.is-admin .layout-main .welcome-panel p {
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px !important;
+  margin: 0 !important;
+}
+
+body.is-admin .layout-main .welcome-panel p span {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border: 1px solid var(--ui-line);
+  border-radius: 999px;
+  background: rgba(251, 251, 248, 0.72);
+  color: var(--ui-text-soft);
+  font-size: 12px;
+  font-weight: 720;
+}
+
+body.is-admin .layout-main .module-board {
+  padding: 15px 14px 16px !important;
+  border-bottom: 1px solid var(--ui-line) !important;
+}
+
+body.is-admin .layout-main .module-board .section-heading {
+  margin-bottom: 12px !important;
+  padding-bottom: 10px !important;
+  border-bottom: 1px solid var(--ui-line) !important;
+}
+
+body.is-admin .layout-main .module-card {
+  min-height: 54px !important;
+  border-color: rgba(32, 37, 34, 0.09) !important;
+  background: rgba(251, 251, 248, 0.66) !important;
+}
+
+body.is-admin .layout-main .module-card:hover,
+body.is-admin .layout-main .module-card.active {
+  background: var(--ui-accent-soft) !important;
+}
+
+body.is-admin .layout-main .vote-toolbar {
+  position: static !important;
+  top: auto !important;
+  padding: 14px !important;
+  border-bottom: 1px solid var(--ui-line) !important;
+}
+
+body.is-admin .layout-main .gallery {
+  min-height: 190px !important;
+  padding: 20px !important;
+}
+
+body.is-admin .layout-main .gallery-drop-zone {
+  min-height: 150px !important;
+  border-color: rgba(37, 111, 97, 0.18) !important;
+  background: rgba(251, 251, 248, 0.54) !important;
+}
+
+body.is-admin .layout-main .tiebreaker-panel,
+body.is-admin .layout-main .results-panel {
+  padding: 18px !important;
+  border-top: 1px solid var(--ui-line) !important;
+}
+
+body[data-theme="dark"].is-admin .layout-side .admin-panel,
+body[data-theme="dark"].is-admin .layout-main {
+  border-color: var(--ui-line) !important;
+  background: rgba(23, 28, 25, 0.9) !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="dark"].is-admin .layout-side .admin-controls,
+body[data-theme="dark"].is-admin .layout-side .period-admin,
+body[data-theme="dark"].is-admin .layout-side .photographer-admin,
+body[data-theme="dark"].is-admin .layout-side .module-voters-admin,
+body[data-theme="dark"].is-admin .layout-side .voting-status-admin,
+body[data-theme="dark"].is-admin .layout-side .ballot-admin,
+body[data-theme="dark"].is-admin .layout-side .results-preview-admin,
+body[data-theme="dark"].is-admin .layout-main .welcome-panel,
+body[data-theme="dark"].is-admin .layout-main .module-board,
+body[data-theme="dark"].is-admin .layout-main .vote-toolbar {
+  border-color: var(--ui-line) !important;
+}
+
+body[data-theme="dark"].is-admin .layout-main .module-card,
+body[data-theme="dark"].is-admin .layout-main .gallery-drop-zone {
+  background: rgba(255, 255, 255, 0.035) !important;
+}
+
+body[data-theme="dark"].is-admin .layout-main .welcome-panel p span {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: var(--ui-line);
+  color: var(--ui-text-soft);
+}
+
+@media (max-width: 900px) {
+  body.is-admin .layout-main .welcome-panel > div {
+    grid-template-columns: 1fr !important;
+  }
+
+  body.is-admin .layout-main .welcome-panel p {
+    justify-content: flex-start;
   }
 }
