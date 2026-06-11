@@ -5924,6 +5924,51 @@ body:not(.is-admin) .layout-main .module-card {
   padding: 8px 9px !important;
 }
 
+body:not(.is-admin) .photographer-result-card {
+  width: 100%;
+  min-height: 76px;
+  display: grid;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 12px 11px;
+  border: 1px solid rgba(37, 111, 97, 0.22);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(229, 244, 237, 0.9), rgba(255, 255, 255, 0.72));
+  color: var(--ui-text);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+body:not(.is-admin) .photographer-result-card[hidden] {
+  display: none !important;
+}
+
+body:not(.is-admin) .photographer-result-card span {
+  color: var(--ui-accent);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+body:not(.is-admin) .photographer-result-card strong {
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:not(.is-admin) .photographer-result-card small {
+  color: var(--ui-text-soft);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+body:not(.is-admin) .photographer-result-card:hover {
+  border-color: rgba(37, 111, 97, 0.34);
+  transform: translateY(-1px);
+}
+
 body:not(.is-admin) .layout-main .module-board .section-heading {
   display: block !important;
 }
@@ -6400,6 +6445,11 @@ body[data-theme="dark"]:not(.is-admin) .layout-main {
 
 body[data-theme="dark"]:not(.is-admin) .layout-main .module-board {
   background: rgba(255, 255, 255, 0.025) !important;
+}
+
+body[data-theme="dark"]:not(.is-admin) .photographer-result-card {
+  background: rgba(185, 217, 201, 0.08);
+  border-color: rgba(185, 217, 201, 0.26);
 }
 
 body[data-theme="dark"]:not(.is-admin) .layout-main .vote-toolbar {

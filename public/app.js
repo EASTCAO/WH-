@@ -81,6 +81,7 @@ const submitVote = document.querySelector("#submitVote");
 const voteToolbar = document.querySelector(".vote-toolbar");
 const entryTemplate = document.querySelector("#entryTemplate");
 const moduleGrid = document.querySelector("#moduleGrid");
+const photographerResultCard = document.querySelector("#photographerResultCard");
 const adminCode = document.querySelector("#adminCode");
 const adminToggle = document.querySelector("#adminToggle");
 const statusToggle = document.querySelector("#statusToggle");
@@ -1327,8 +1328,21 @@ async function submitTiebreakerVote(tiebreakerId) {
 function renderResults() {
   const hasResultEntries = results.some(entry => entry.mediaCount > 0 || entry.votes > 0 || entry.sku);
   const canViewResults = adminMode || (resultsPublished && hasResultEntries);
-  if (resultsPanel) resultsPanel.hidden = adminMode || !canViewResults;
+  const showPhotographerResultCard = !adminMode && resultsPublished && hasResultEntries;
+  if (resultsPanel) resultsPanel.hidden = adminMode || showPhotographerResultCard || !canViewResults;
   if (resultsPreviewAdmin) resultsPreviewAdmin.hidden = !adminMode;
+  if (photographerResultCard) {
+    photographerResultCard.hidden = !showPhotographerResultCard;
+    if (showPhotographerResultCard) {
+      const awardedCount = modules.reduce((sum, module) => sum + moduleResultList(module.name).slice(0, resultLimitForModule(module.name)).length, 0);
+      const label = currentPeriodName || currentPeriodId || "本期评优";
+      photographerResultCard.innerHTML = `
+        <span>评优结果</span>
+        <strong>${escapeHtml(label)}</strong>
+        <small>${awardedCount} 个获奖名额 · 点击查看完整排名</small>
+      `;
+    }
+  }
   if (!canViewResults) return;
 
   resultsTitle.textContent = resultsPublished ? "最终评优结果" : (adminMode ? "后台票数预览" : "最终结果");
@@ -1897,6 +1911,12 @@ if (createNextPeriod) createNextPeriod.addEventListener("click", () => {
   if (!adminMode) return;
   openNextPeriodDialog();
 });
+if (photographerResultCard) {
+  photographerResultCard.addEventListener("click", () => {
+    resultDialogDismissed = false;
+    openResultDialogIfNeeded(true);
+  });
+}
 if (closeAdminInfoDialog) closeAdminInfoDialog.addEventListener("click", () => adminInfoDialog?.close());
 if (closeNextPeriodDialog) closeNextPeriodDialog.addEventListener("click", () => nextPeriodDialog?.close());
 if (adminInfoDialog) {
