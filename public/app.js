@@ -26,6 +26,8 @@ let previewEntry = null;
 let viewerIndex = 0;
 let viewerZoom = { scale: 1, x: 0, y: 0, dragging: false, startX: 0, startY: 0 };
 let photographers = [];
+let moduleVoters = {};
+let votingStatus = null;
 let loggedInName = localStorage.getItem("photoReviewVoter") || "";
 let toastTimer = null;
 let ballots = [];
@@ -45,6 +47,7 @@ const CLIENT_IMAGE_QUALITY = 0.86;
 const CLIENT_OPTIMIZABLE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 let uploadQueue = Promise.resolve();
 let uploadQueueLength = 0;
+let galleryDragDepth = 0;
 let processingRefreshTimer = null;
 let deferredRender = false;
 let scrollBeforeViewer = 0;
@@ -83,6 +86,7 @@ const adminToggle = document.querySelector("#adminToggle");
 const statusToggle = document.querySelector("#statusToggle");
 const publishToggle = document.querySelector("#publishToggle");
 const downloadArchive = document.querySelector("#downloadArchive");
+const downloadPoster = document.querySelector("#downloadPoster");
 const clearCurrentPeriod = document.querySelector("#clearCurrentPeriod");
 const optimizeStatus = document.querySelector("#optimizeStatus");
 const adminPanel = document.querySelector("#adminPanel");
@@ -90,6 +94,11 @@ const photographerName = document.querySelector("#photographerName");
 const addPhotographer = document.querySelector("#addPhotographer");
 const photographerAdmin = document.querySelector("#photographerAdmin");
 const photographerList = document.querySelector("#photographerList");
+const moduleVotersAdmin = document.querySelector("#moduleVotersAdmin");
+const moduleVotersList = document.querySelector("#moduleVotersList");
+const votingStatusAdmin = document.querySelector("#votingStatusAdmin");
+const votingStatusSummary = document.querySelector("#votingStatusSummary");
+const votingStatusList = document.querySelector("#votingStatusList");
 const ballotAdmin = document.querySelector("#ballotAdmin");
 const ballotList = document.querySelector("#ballotList");
 const periodAdmin = document.querySelector("#periodAdmin");
@@ -108,6 +117,16 @@ const closePreview = document.querySelector("#closePreview");
 const resultDialog = document.querySelector("#resultDialog");
 const resultDialogGrid = document.querySelector("#resultDialogGrid");
 const closeResultDialog = document.querySelector("#closeResultDialog");
+const adminInfoDialog = document.querySelector("#adminInfoDialog");
+const adminInfoTitle = document.querySelector("#adminInfoTitle");
+const adminInfoBody = document.querySelector("#adminInfoBody");
+const closeAdminInfoDialog = document.querySelector("#closeAdminInfoDialog");
+const nextPeriodDialog = document.querySelector("#nextPeriodDialog");
+const closeNextPeriodDialog = document.querySelector("#closeNextPeriodDialog");
+const cancelNextPeriod = document.querySelector("#cancelNextPeriod");
+const confirmNextPeriod = document.querySelector("#confirmNextPeriod");
+const currentPeriodPreview = document.querySelector("#currentPeriodPreview");
+const nextPeriodPreview = document.querySelector("#nextPeriodPreview");
 
 const imageViewer = document.querySelector("#imageViewer");
 const viewerTitle = document.querySelector("#viewerTitle");
@@ -276,8 +295,8 @@ function hasOpenTiebreakerFor(entryIds) {
 }
 
 function entryMeta(entry) {
-  if (adminMode && entry.title) return `${entry.title} · ${entry.photographer} · 整套作品 · ${mediaText(entry)}`;
-  return `匿名作品 · 整套作品 · ${mediaText(entry)}`;
+  if (adminMode && entry.title) return `${entry.title} · ${entry.photographer} · ${mediaText(entry)}`;
+  return mediaText(entry);
 }
 
 function resultDisplayTitle(entry) {
@@ -337,8 +356,18 @@ async function loadData() {
   if (adminMode) {
     const photographerData = await fetchJson(`/api/photographers?adminCode=${encodeURIComponent(adminCode.value.trim())}`);
     photographers = photographerData.photographers;
+    try {
+      const statusData = await fetchJson(`/api/admin/voting-status?adminCode=${encodeURIComponent(adminCode.value.trim())}`);
+      moduleVoters = statusData.moduleVoters || {};
+      votingStatus = statusData.status || null;
+    } catch (error) {
+      moduleVoters = {};
+      votingStatus = null;
+    }
   } else {
     photographers = [];
+    moduleVoters = {};
+    votingStatus = null;
   }
   const query = adminMode
     ? `?adminCode=${encodeURIComponent(adminCode.value.trim())}`
@@ -524,6 +553,123 @@ function renderPhotographerAdmin() {
   });
 }
 
+function renderModuleVotersAdmin() {
+  if (!moduleVotersList || !moduleVotersAdmin) return;
+  moduleVotersAdmin.hidden = !adminMode;
+  if (!adminMode) {
+    moduleVotersList.innerHTML = "";
+    return;
+  }
+  const statusModules = (votingStatus && votingStatus.modules) || [];
+  if (!statusModules.length) {
+    moduleVotersList.innerHTML = `<div class="empty compact">暂无模块</div>`;
+    return;
+  }
+  if (!photographers.length) {
+    moduleVotersList.innerHTML = `<div class="empty compact">请先在「摄影师名单」里添加人员</div>`;
+    return;
+  }
+  moduleVotersList.innerHTML = statusModules.map(module => {
+    const assigned = new Set(moduleVoters[module.name] || []);
+    const pills = photographers.map(name => `
+      <button type="button" class="voter-pill${assigned.has(name) ? " is-assigned" : ""}"
+        data-module="${escapeHtml(module.name)}" data-name="${escapeHtml(name)}">
+        ${escapeHtml(name)}
+      </button>
+    `).join("");
+    return `
+      <div class="module-voters-row">
+        <div class="module-voters-head">
+          <strong>${escapeHtml(module.name)}</strong>
+          <span class="muted">已选 ${assigned.size} 人</span>
+        </div>
+        <div class="voter-pills">${pills}</div>
+      </div>
+    `;
+  }).join("");
+
+  moduleVotersList.querySelectorAll(".voter-pill").forEach(button => {
+    button.addEventListener("click", () => toggleModuleVoter(button.dataset.module, button.dataset.name));
+  });
+}
+
+function renderVotingStatus() {
+  if (!votingStatusList || !votingStatusAdmin) return;
+  votingStatusAdmin.hidden = !adminMode;
+  if (!adminMode) {
+    votingStatusList.innerHTML = "";
+    if (votingStatusSummary) votingStatusSummary.innerHTML = "";
+    return;
+  }
+  const status = votingStatus;
+  if (!status || !status.modules) {
+    votingStatusList.innerHTML = `<div class="empty compact">暂无进度</div>`;
+    if (votingStatusSummary) votingStatusSummary.innerHTML = "";
+    return;
+  }
+  const assignedModules = status.modules.filter(m => m.expected.length);
+  if (votingStatusSummary) {
+    if (!assignedModules.length) {
+      votingStatusSummary.className = "voting-status-summary";
+      votingStatusSummary.innerHTML = `还没有为任何模块设置应投名单，请先到「投票名单分组」里配置。`;
+    } else if (status.allDone) {
+      votingStatusSummary.className = "voting-status-summary done";
+      votingStatusSummary.innerHTML = `✅ 所有应投人员已完成投票`;
+    } else {
+      const remainingPeople = assignedModules.reduce((sum, m) => sum + m.notVoted.length, 0);
+      const remainingModules = assignedModules.filter(m => m.notVoted.length).length;
+      votingStatusSummary.className = "voting-status-summary pending";
+      votingStatusSummary.innerHTML = `还差 ${remainingModules} 个模块、共 ${remainingPeople} 人未投`;
+    }
+  }
+  votingStatusList.innerHTML = status.modules.map(module => {
+    if (!module.expected.length) {
+      return `
+        <div class="voting-status-row empty-assign">
+          <div class="voting-status-head"><strong>${escapeHtml(module.name)}</strong><span class="muted">未设置应投名单</span></div>
+        </div>
+      `;
+    }
+    const done = module.notVoted.length === 0;
+    const notVoted = module.notVoted.length
+      ? `<div class="not-voted">未投：${module.notVoted.map(escapeHtml).join("、")}</div>`
+      : `<div class="all-voted">全部已投 ✅</div>`;
+    const extra = module.extra.length
+      ? `<div class="extra-voted">名单外投票：${module.extra.map(escapeHtml).join("、")}</div>`
+      : "";
+    return `
+      <div class="voting-status-row${done ? " done" : ""}">
+        <div class="voting-status-head">
+          <strong>${escapeHtml(module.name)}</strong>
+          <span class="count">已投 ${module.voted.length} / 应投 ${module.expected.length}</span>
+        </div>
+        ${notVoted}
+        ${extra}
+      </div>
+    `;
+  }).join("");
+}
+
+async function toggleModuleVoter(moduleName, name) {
+  if (!adminMode) return;
+  const current = new Set(moduleVoters[moduleName] || []);
+  if (current.has(name)) current.delete(name);
+  else current.add(name);
+  try {
+    const result = await fetchJson("/api/admin/module-voters", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adminCode: adminCode.value.trim(), moduleName, voters: [...current] })
+    });
+    moduleVoters = result.moduleVoters || {};
+    votingStatus = result.status || votingStatus;
+    renderModuleVotersAdmin();
+    renderVotingStatus();
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
 function renderPeriodAdmin() {
   if (!periodAdmin || !periodSelect || !periodStatus) return;
   periodAdmin.hidden = !adminMode;
@@ -566,6 +712,66 @@ function renderBallotAdmin() {
   }).join("");
 }
 
+function bindDialogVoterPills() {
+  if (!adminInfoBody) return;
+  adminInfoBody.querySelectorAll(".voter-pill").forEach(button => {
+    button.addEventListener("click", async () => {
+      await toggleModuleVoter(button.dataset.module, button.dataset.name);
+      openAdminInfoDialog("投票名单分组", moduleVotersList, { interactiveVoters: true });
+    });
+  });
+}
+
+function openAdminInfoDialog(title, contentNode, options = {}) {
+  if (!adminInfoDialog || !adminInfoTitle || !adminInfoBody || !contentNode) return;
+  adminInfoTitle.textContent = title;
+  adminInfoBody.innerHTML = "";
+  adminInfoBody.appendChild(contentNode.cloneNode(true));
+  if (!adminInfoDialog.open) adminInfoDialog.showModal();
+  if (options.interactiveVoters) bindDialogVoterPills();
+}
+
+function nextPeriodLabelFromCurrent() {
+  const match = String(currentPeriodId || "").match(/^(\d{4})-(\d{2})$/);
+  if (!match) return "下月评优";
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const date = new Date(year, month, 1);
+  return `${date.getFullYear()}年${date.getMonth() + 1}月评优`;
+}
+
+function openNextPeriodDialog() {
+  if (currentPeriodPreview) currentPeriodPreview.textContent = currentPeriodName || currentPeriodId || "当前评优";
+  if (nextPeriodPreview) nextPeriodPreview.textContent = nextPeriodLabelFromCurrent();
+  nextPeriodDialog?.showModal();
+}
+
+function bindAdminInfoCards() {
+  [
+    { detail: moduleVotersAdmin, title: "投票名单分组", content: moduleVotersList, interactiveVoters: true },
+    { detail: votingStatusAdmin, title: "投票进度", content: votingStatusList, extra: votingStatusSummary },
+    { detail: ballotAdmin, title: "投票记录", content: ballotList }
+  ].forEach(item => {
+    if (!item.detail || item.detail.dataset.dialogBound) return;
+    item.detail.dataset.dialogBound = "1";
+    item.detail.addEventListener("toggle", () => {
+      if (item.detail.open) item.detail.open = false;
+    });
+    item.detail.addEventListener("click", event => {
+      if (!adminMode) return;
+      event.preventDefault();
+      if (item.extra) {
+        const wrapper = document.createElement("div");
+        wrapper.appendChild(item.extra.cloneNode(true));
+        wrapper.appendChild(item.content.cloneNode(true));
+        openAdminInfoDialog(item.title, wrapper);
+        return;
+      }
+      openAdminInfoDialog(item.title, item.content, { interactiveVoters: item.interactiveVoters });
+    });
+  });
+}
+
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, char => ({
     "&": "&amp;",
@@ -598,6 +804,8 @@ function render() {
   renderOptimizeStatus();
   renderPeriodAdmin();
   renderPhotographerAdmin();
+  renderModuleVotersAdmin();
+  renderVotingStatus();
   renderBallotAdmin();
   renderModules();
   renderGallery();
@@ -659,10 +867,18 @@ function renderStatusControls() {
   publishToggle.hidden = !adminMode;
   publishToggle.disabled = !adminMode;
   publishToggle.textContent = resultsPublished ? "收回结果" : "公布结果";
+  if (adminToggle) {
+    adminToggle.hidden = !adminMode;
+    adminToggle.textContent = "退出后台";
+  }
   if (downloadArchive) {
     downloadArchive.hidden = !adminMode;
     downloadArchive.disabled = !adminMode;
     downloadArchive.textContent = "\u4e0b\u8f7d\u5f52\u6863";
+  }
+  if (downloadPoster) {
+    downloadPoster.hidden = !adminMode;
+    downloadPoster.disabled = !adminMode;
   }
   if (clearCurrentPeriod) clearCurrentPeriod.hidden = !adminMode;
   submitVote.disabled = !votingOpen || !voterName() || isSubmittingVote;
@@ -753,24 +969,34 @@ function renderModules() {
       });
     });
 
-    button.addEventListener("drop", async event => {
+    button.addEventListener("drop", event => {
       const targetModule = modules.find(module => module.name === button.dataset.module);
-      try {
-        if (!adminMode && !voterName()) {
-          setStatus("请先登录自己的姓名后再上传");
-          authName?.focus();
-          return;
-        }
-        activeModule = targetModule;
-        render();
-        setStatus(`正在读取 ${targetModule.name} 的作品文件夹...`);
-        const files = await collectDroppedFiles(event.dataTransfer);
-        enqueueUpload(files, targetModule.name);
-      } catch (error) {
-        setStatus(error.message || "读取拖拽文件夹失败");
-      }
+      handleUploadDrop(event, targetModule);
     });
   });
+}
+
+async function handleUploadDrop(event, targetModule = activeModule) {
+  event.preventDefault();
+  event.stopPropagation();
+  galleryDragDepth = 0;
+  gallery.classList.remove("dragging");
+
+  try {
+    if (!targetModule) return;
+    if (!adminMode && !voterName()) {
+      setStatus("请先登录自己的姓名后再上传");
+      authName?.focus();
+      return;
+    }
+    activeModule = targetModule;
+    render();
+    setStatus(`正在读取 ${targetModule.name} 的作品文件夹...`);
+    const files = await collectDroppedFiles(event.dataTransfer);
+    enqueueUpload(files, targetModule.name);
+  } catch (error) {
+    setStatus(error.message || "读取拖拽文件夹失败");
+  }
 }
 
 function renderGallery() {
@@ -779,10 +1005,17 @@ function renderGallery() {
   const voter = voterName();
 
   if (!list.length) {
-    const message = adminMode
-      ? `${currentPeriodName || "当前月份"} 的 ${activeModule.name} 暂无作品。把作品文件夹拖到上方对应模块即可上传。`
-      : `${currentPeriodName || "当前月份"} 的 ${activeModule.name} 暂无作品，请等待管理员上传或切换到已公布结果的月份查看。`;
-    gallery.innerHTML = `<div class="empty">${escapeHtml(message)}</div>`;
+    const canUpload = adminMode || Boolean(voter);
+    const uploadHint = canUpload
+      ? `把文件夹、图片或视频拖到这里，上传到 ${activeModule.name}`
+      : "请先登录自己的姓名后再上传作品";
+    const message = `${currentPeriodName || "当前月份"} 的 ${activeModule.name} 暂无作品`;
+    gallery.innerHTML = `
+      <div class="empty gallery-drop-zone">
+        <strong>${escapeHtml(uploadHint)}</strong>
+        <span>${escapeHtml(message)}</span>
+      </div>
+    `;
     return;
   }
 
@@ -827,7 +1060,6 @@ function renderPreviewContent() {
       ${item.kind === "video"
         ? `<span class="video-preview-placeholder" aria-hidden="true"><span class="video-play-icon">▶</span></span><span class="media-kind-badge">视频</span><span class="media-play-badge">点击播放</span>`
         : `<img src="${item.src}" loading="lazy" alt="${entryTitle(previewEntry)} 第 ${index + 1} 张">`}
-      <span class="media-index-badge">${index + 1}/${previewEntry.media.length}</span>
       ${item.processing ? `<span class="media-processing">处理中</span>` : ""}
       <span class="media-error" hidden>加载失败，点击打开原文件</span>
     </button>
@@ -1514,14 +1746,14 @@ function goToNextPendingModule(submittedModuleName) {
   }, 1000);
 }
 
-async function updatePeriod(action) {
+async function updatePeriod(action, options = {}) {
   if (!adminMode) {
     alert("请先打开管理员后台");
     return;
   }
   const payload = { adminCode: adminCode.value.trim(), action };
   if (action === "switch") payload.periodId = periodSelect.value;
-  if (action === "createNext" && !confirm("确定新建下月评优并切换过去吗？新月份会从空作品开始，历史月份仍可切回查看。")) return;
+  if (action === "createNext" && !options.skipConfirm && !confirm("确定新建下月评优并切换过去吗？新月份会从空作品开始，历史月份仍可切回查看。")) return;
 
   try {
     await fetchJson("/api/periods", {
@@ -1599,16 +1831,57 @@ voterInput.addEventListener("keydown", event => {
 });
 voterLogout.addEventListener("click", logoutPhotographer);
 submitVote.addEventListener("click", submitCurrentVote);
-addPhotographer.addEventListener("click", () => updatePhotographer("add"));
+if (gallery) {
+  ["dragenter", "dragover"].forEach(eventName => {
+    gallery.addEventListener(eventName, event => {
+      event.preventDefault();
+      galleryDragDepth += eventName === "dragenter" ? 1 : 0;
+      gallery.classList.add("dragging");
+    });
+  });
+
+  gallery.addEventListener("dragleave", event => {
+    event.preventDefault();
+    galleryDragDepth = Math.max(0, galleryDragDepth - 1);
+    if (galleryDragDepth === 0) gallery.classList.remove("dragging");
+  });
+
+  gallery.addEventListener("drop", event => {
+    handleUploadDrop(event, activeModule);
+  });
+}
+if (addPhotographer) addPhotographer.addEventListener("click", () => updatePhotographer("add"));
 if (periodSelect) {
   periodSelect.addEventListener("change", () => {
     if (adminMode) updatePeriod("switch");
   });
 }
-if (createNextPeriod) createNextPeriod.addEventListener("click", () => updatePeriod("createNext"));
-photographerName.addEventListener("keydown", event => {
-  if (event.key === "Enter") updatePhotographer("add");
+if (createNextPeriod) createNextPeriod.addEventListener("click", () => {
+  if (!adminMode) return;
+  openNextPeriodDialog();
 });
+if (closeAdminInfoDialog) closeAdminInfoDialog.addEventListener("click", () => adminInfoDialog?.close());
+if (closeNextPeriodDialog) closeNextPeriodDialog.addEventListener("click", () => nextPeriodDialog?.close());
+if (adminInfoDialog) {
+  adminInfoDialog.addEventListener("click", event => {
+    if (event.target === adminInfoDialog) adminInfoDialog.close();
+  });
+}
+if (nextPeriodDialog) {
+  nextPeriodDialog.addEventListener("click", event => {
+    if (event.target === nextPeriodDialog) nextPeriodDialog.close();
+  });
+}
+if (cancelNextPeriod) cancelNextPeriod.addEventListener("click", () => nextPeriodDialog?.close());
+if (confirmNextPeriod) confirmNextPeriod.addEventListener("click", async () => {
+  nextPeriodDialog?.close();
+  await updatePeriod("createNext", { skipConfirm: true });
+});
+if (photographerName) {
+  photographerName.addEventListener("keydown", event => {
+    if (event.key === "Enter") updatePhotographer("add");
+  });
+}
 adminToggle.addEventListener("click", async () => {
   if (adminMode) {
     adminMode = false;
@@ -1679,6 +1952,210 @@ if (downloadArchive) {
     link.remove();
     showToast("正在生成本月归档，请等待浏览器下载完成");
   });
+}
+if (downloadPoster) {
+  downloadPoster.addEventListener("click", () => {
+    if (!adminMode) return;
+    try {
+      drawResultPoster();
+    } catch (error) {
+      console.error(error);
+      showToast("生成海报失败：" + (error?.message || "未知错误"), "error");
+    }
+  });
+}
+
+function posterModuleBlocks() {
+  // All ranked works per module (not just winners), in MODULES order.
+  // awardLimit marks how many of the top rows count as "获奖" for highlighting.
+  return modules
+    .map(module => {
+      const awardLimit = resultLimitForModule(module.name);
+      const list = moduleResultList(module.name).filter(entry => entry.sku || entry.votes > 0);
+      return { name: module.name, rows: list, awardLimit };
+    })
+    .filter(block => block.rows.length > 0);
+}
+
+function drawResultPoster() {
+  const blocks = posterModuleBlocks();
+  if (!blocks.length) {
+    showToast("当前没有可导出的结果", "error");
+    return;
+  }
+
+  const RANK_LABEL = ["🥇", "🥈", "🥉"];
+  // Brighter medal tones so they read on the dark award cards.
+  const RANK_COLOR = ["#f0c14b", "#cfd3d8", "#e0935a"];
+  const FONT = '"PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif';
+
+  // Palette — strong light/dark split between winners and the rest.
+  const INK = "#1a1c1f";
+  const PAGE_BG = "#f2efe8";
+  const AWARD_BG = "#1a1c1f";       // dark card = 获奖
+  const AWARD_TEXT = "#ffffff";
+  const AWARD_SUB = "#c9b48a";      // warm gold-ish subtext on dark
+  const REST_BG = "#ffffff";        // light card = 未获奖
+  const REST_TEXT = "#1a1c1f";
+  const REST_SUB = "#8a8f96";
+
+  // Layout metrics (logical px).
+  const W = 900;
+  const padX = 56;
+  const titleBlockH = 168;
+  const moduleHeaderH = 64;
+  const rowH = 70;
+  const rowGap = 8;
+  const moduleGap = 34;
+  const footerH = 76;
+
+  let H = titleBlockH + footerH;
+  for (const block of blocks) H += moduleHeaderH + block.rows.length * (rowH + rowGap) + moduleGap;
+
+  const scale = 2; // crisp on high-DPI and when re-shared
+  const canvas = document.createElement("canvas");
+  canvas.width = W * scale;
+  canvas.height = H * scale;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(scale, scale);
+  ctx.textBaseline = "middle";
+
+  // Background.
+  ctx.fillStyle = PAGE_BG;
+  ctx.fillRect(0, 0, W, H);
+  // Top accent bar.
+  ctx.fillStyle = INK;
+  ctx.fillRect(0, 0, W, 10);
+
+  const periodLabel = currentPeriodName || currentPeriodId || "本期";
+
+  // Title.
+  ctx.fillStyle = INK;
+  ctx.textAlign = "left";
+  ctx.font = `800 40px ${FONT}`;
+  ctx.fillText(`🏆 ${periodLabel} 作品评优结果`, padX, 78);
+  ctx.fillStyle = "#6b6f76";
+  ctx.font = `400 20px ${FONT}`;
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日 导出 · 完整排名`;
+  ctx.fillText(dateStr, padX, 118);
+  // Divider under title.
+  ctx.strokeStyle = "#d8d3c7";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padX, 150);
+  ctx.lineTo(W - padX, 150);
+  ctx.stroke();
+
+  let y = titleBlockH;
+  for (const block of blocks) {
+    // Module header.
+    ctx.fillStyle = INK;
+    ctx.fillRect(padX, y + 18, 6, 28);
+    ctx.font = `800 27px ${FONT}`;
+    ctx.textAlign = "left";
+    ctx.fillText(block.name, padX + 20, y + 33);
+    // Award-count hint on the right.
+    ctx.fillStyle = "#9a9da3";
+    ctx.font = `400 16px ${FONT}`;
+    ctx.textAlign = "right";
+    ctx.fillText(`获奖 ${block.awardLimit} 名 · 共 ${block.rows.length} 名`, W - padX, y + 33);
+    y += moduleHeaderH;
+
+    block.rows.forEach((entry, index) => {
+      const rowTop = y;
+      const midY = rowTop + rowH / 2;
+      const isAward = index < block.awardLimit;
+      const isMedal = index < 3;
+      const cardBg = isAward ? AWARD_BG : REST_BG;
+      const mainText = isAward ? AWARD_TEXT : REST_TEXT;
+      const subText = isAward ? AWARD_SUB : REST_SUB;
+
+      // Row card.
+      ctx.fillStyle = cardBg;
+      roundRect(ctx, padX, rowTop, W - padX * 2, rowH, 12);
+      ctx.fill();
+      // Light cards get a hairline border so they don't melt into the page.
+      if (!isAward) {
+        ctx.strokeStyle = "#e3e0d8";
+        ctx.lineWidth = 1;
+        roundRect(ctx, padX, rowTop, W - padX * 2, rowH, 12);
+        ctx.stroke();
+      }
+
+      // Rank badge.
+      ctx.textAlign = "center";
+      if (isMedal) {
+        ctx.font = `400 32px ${FONT}`;
+        ctx.fillText(RANK_LABEL[index], padX + 36, midY - 4);
+      } else {
+        ctx.fillStyle = mainText;
+        ctx.font = `800 24px ${FONT}`;
+        ctx.fillText(`${index + 1}`, padX + 36, midY - 4);
+      }
+      // Rank caption.
+      ctx.fillStyle = isMedal ? RANK_COLOR[index] : subText;
+      ctx.font = `700 14px ${FONT}`;
+      ctx.fillText(`第${index + 1}名`, padX + 36, midY + 20);
+
+      // Name + SKU.
+      const photographer = entry.photographer || "未识别摄影师";
+      const sku = entry.sku ? cleanSku(entry.sku) : "未识别SKU";
+      ctx.textAlign = "left";
+      ctx.fillStyle = mainText;
+      ctx.font = `700 25px ${FONT}`;
+      ctx.fillText(photographer, padX + 82, midY - 11);
+      ctx.fillStyle = subText;
+      ctx.font = `400 18px ${FONT}`;
+      ctx.fillText(sku, padX + 82, midY + 15);
+
+      // Votes (right aligned).
+      ctx.textAlign = "right";
+      ctx.fillStyle = mainText;
+      ctx.font = `800 27px ${FONT}`;
+      ctx.fillText(`${entry.votes} 票`, W - padX - 20, midY - 8);
+      if (entry.tiebreakerVotes) {
+        ctx.fillStyle = subText;
+        ctx.font = `400 15px ${FONT}`;
+        ctx.fillText(`加赛 ${entry.tiebreakerVotes} 票`, W - padX - 20, midY + 16);
+      }
+
+      y += rowH + rowGap;
+    });
+    y += moduleGap;
+  }
+
+  // Footer.
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#9a9da3";
+  ctx.font = `400 16px ${FONT}`;
+  ctx.fillText("作品评优系统 · 深色卡片为获奖名次", W / 2, H - footerH / 2);
+
+  canvas.toBlob(blob => {
+    if (!blob) {
+      showToast("生成海报失败", "error");
+      return;
+    }
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${periodLabel} 评优结果.png`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 4000);
+    showToast("海报已下载，可直接转发到企业微信群");
+  }, "image/png");
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  const radius = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
+  ctx.closePath();
 }
 if (clearCurrentPeriod) {
   clearCurrentPeriod.addEventListener("click", async () => {
@@ -1768,6 +2245,8 @@ document.addEventListener("keydown", event => {
     if (event.key === "0") resetViewerZoom();
   }
 });
+
+bindAdminInfoCards();
 
 loadData().catch(error => {
   gallery.innerHTML = `<div class="empty">${error.message}</div>`;
