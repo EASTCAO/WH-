@@ -6888,24 +6888,24 @@ body:not(.is-admin) .layout-main .workspace-status {
   grid-column: 2;
   grid-row: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, auto);
-  align-items: center;
-  gap: 22px;
-  min-height: 82px;
-  padding: 15px 18px;
+  grid-template-columns: minmax(260px, 1fr) minmax(260px, 340px);
+  align-items: stretch;
+  gap: 12px;
+  min-height: 96px;
+  padding: 14px 18px;
   border-bottom: 1px solid var(--ui-line) !important;
-  background:
-    linear-gradient(90deg, rgba(251, 251, 248, 0.96), rgba(255, 255, 255, 0.9)) !important;
+  background: rgba(251, 251, 248, 0.58) !important;
 }
 
 body:not(.is-admin) .layout-main .workspace-status .vote-toolbar,
 body:not(.is-admin) .layout-main .workspace-status .welcome-panel {
   grid-row: 1;
-  min-height: 0 !important;
+  min-height: 68px !important;
   margin: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-  background: transparent !important;
+  padding: 14px 16px !important;
+  border: 1px solid rgba(32, 37, 34, 0.09) !important;
+  border-radius: 14px !important;
+  background: rgba(255, 255, 255, 0.86) !important;
   box-shadow: none !important;
   backdrop-filter: none;
 }
@@ -6915,14 +6915,13 @@ body:not(.is-admin) .layout-main .workspace-status .vote-toolbar {
 }
 
 body:not(.is-admin) .layout-main .workspace-status .vote-toolbar > div {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 12px;
+  height: 100%;
+  display: grid;
+  align-content: center;
+  gap: 9px;
 }
 
 body:not(.is-admin) .layout-main .workspace-status .vote-toolbar strong {
-  min-width: 100%;
   font-size: 22px !important;
   line-height: 1.1;
   letter-spacing: 0;
@@ -6944,26 +6943,26 @@ body:not(.is-admin) .layout-main .workspace-status #selectedCount {
 body:not(.is-admin) .layout-main .workspace-status .welcome-panel {
   grid-column: 2 !important;
   min-width: 0;
-  padding-left: 22px !important;
-  border-left: 1px solid rgba(32, 37, 34, 0.1) !important;
 }
 
 body:not(.is-admin) .layout-main .workspace-status .welcome-panel > div {
+  height: 100%;
   min-height: 0 !important;
   display: grid !important;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center !important;
+  grid-template-columns: 1fr;
+  align-content: center;
+  align-items: start !important;
   justify-content: stretch;
-  gap: 9px 10px !important;
+  gap: 8px !important;
 }
 
 body:not(.is-admin) .layout-main .workspace-status .welcome-panel h2 {
   min-width: 0;
-  max-width: 220px;
+  max-width: 100%;
   color: var(--ui-text);
   font-size: 14px !important;
   font-weight: 760;
-  line-height: 30px !important;
+  line-height: 1.3 !important;
   text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -6988,8 +6987,13 @@ body:not(.is-admin) .layout-main .workspace-status .phase-badge::before {
 }
 
 body[data-theme="dark"]:not(.is-admin) .layout-main .workspace-status {
-  background:
-    linear-gradient(90deg, rgba(23, 28, 25, 0.94), rgba(27, 32, 29, 0.9)) !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+body[data-theme="dark"]:not(.is-admin) .layout-main .workspace-status .vote-toolbar,
+body[data-theme="dark"]:not(.is-admin) .layout-main .workspace-status .welcome-panel {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: var(--ui-line) !important;
 }
 
 body[data-theme="dark"]:not(.is-admin) .layout-main .workspace-status #selectedCount {
@@ -7016,10 +7020,6 @@ body[data-theme="dark"]:not(.is-admin) .layout-main .workspace-status .welcome-p
 
   body:not(.is-admin) .layout-main .workspace-status .welcome-panel {
     min-width: 0;
-    padding-top: 10px !important;
-    padding-left: 0 !important;
-    border-top: 1px solid rgba(32, 37, 34, 0.1) !important;
-    border-left: 0 !important;
   }
 
   body:not(.is-admin) .layout-main .workspace-status .welcome-panel > div {
