@@ -519,6 +519,46 @@ function normalizeUploadFile(file, fallbackModuleName, photographers, periodId, 
   return { ...file, ...info, entryId, relativePath, ext, mediaKind };
 }
 
+function resolveUploadOwnership(files, fallbackModuleName, uploaderName, isAdminUpload, photographers, periodId) {
+  if (!uploaderName && !isAdminUpload) {
+    throw new Error("请先登录摄影师姓名上传本人作品，或使用管理员后台代传。");
+  }
+
+  const owners = new Set();
+  const modules = new Set();
+  const media = [];
+
+  for (const file of files) {
+    const normalized = normalizeUploadFile(file, fallbackModuleName, photographers, periodId, false);
+    if (!normalized) continue;
+    const knownPhotographer = knownPhotographerNames([
+      normalized.photographer,
+      normalized.workFolder,
+      normalized.sku,
+      normalized.title,
+      normalized.relativePath
+    ], photographers);
+    const uploadedBy = applyUploadOwner(normalized, uploaderName, knownPhotographer, photographers);
+    owners.add(normalized.photographer);
+    modules.add(normalized.moduleName);
+    media.push({
+      relativePath: normalized.relativePath,
+      moduleName: normalized.moduleName,
+      photographer: normalized.photographer,
+      uploadedBy
+    });
+  }
+
+  if (!media.length) throw new Error("文件夹里没有可识别的图片或视频");
+
+  return {
+    owners: [...owners],
+    modules: [...modules],
+    media,
+    uploadedBy: uploaderName ? "photographer" : "admin"
+  };
+}
+
 function resolveUploaderName(value, photographers) {
   const uploaderName = normalizeName(value);
   if (!uploaderName) return "";
@@ -1324,6 +1364,18 @@ async function handleUpload(req, res) {
   sendJson(res, 200, { ok: true, entries: grouped.size, media: mediaTotal });
 }
 
+async function handleUploadPreviewOwner(req, res) {
+  const payload = await collectJson(req);
+  const fallbackModuleName = MODULE_BY_NAME.has(payload.moduleName) ? payload.moduleName : MODULES[0].name;
+  const files = Array.isArray(payload.files) ? payload.files : [];
+  const dbSnapshot = readDb();
+  const photographers = dbSnapshot.photographers || [];
+  const uploaderName = resolveUploaderName(payload.uploaderName, photographers);
+  const adminUpload = !uploaderName && isAdminPayload(payload);
+  const preview = resolveUploadOwnership(files, fallbackModuleName, uploaderName, adminUpload, photographers, dbSnapshot.currentPeriodId);
+  sendJson(res, 200, { ok: true, ...preview });
+}
+
 async function handleStorageSign(req, res) {
   if (!storageConfigured()) return sendJson(res, 400, { error: "对象存储未配置，继续使用本地上传" });
   const payload = await collectJson(req);
@@ -2110,6 +2162,11 @@ function handleApi(req, res) {
 
   if (req.method === "POST" && url.pathname === "/api/upload") {
     handleUpload(req, res).catch(error => sendJson(res, 400, { error: error.message }));
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/upload/preview-owner") {
+    handleUploadPreviewOwner(req, res).catch(error => sendJson(res, 400, { error: error.message }));
     return;
   }
 

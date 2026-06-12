@@ -1625,6 +1625,19 @@ async function uploadFiles(files, moduleName) {
       return;
     }
   }
+  let ownerPreview = null;
+  try {
+    ownerPreview = await previewUploadOwner(mediaFiles, moduleName);
+  } catch (error) {
+    setStatus(error.message);
+    showToast(error.message, "error");
+    return;
+  }
+  if (adminMode && ownerPreview.owners?.length) {
+    setStatus(`${moduleName} 代传预检通过：识别为 ${ownerPreview.owners.join("、")} 的作品，开始上传...`);
+  } else if (!adminMode) {
+    setStatus(`${moduleName} 本人上传预检通过：作品将记录为 ${voterName()}，开始上传...`);
+  }
   const batches = chunkArray(mediaFiles, UPLOAD_BATCH_SIZE);
   let uploadedFiles = 0;
   let totalMedia = 0;
@@ -1648,6 +1661,25 @@ async function uploadFiles(files, moduleName) {
   } catch (error) {
     setStatus(error.message);
   }
+}
+
+async function previewUploadOwner(mediaFiles, moduleName) {
+  const files = mediaFiles.map(file => ({
+    name: file.name,
+    relativePath: file.relativePath || file.webkitRelativePath || file.name,
+    type: file.type || "",
+    size: file.size || 0
+  }));
+  return fetchJson("/api/upload/preview-owner", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      moduleName,
+      files,
+      uploaderName: adminMode ? "" : voterName(),
+      adminCode: adminMode ? adminCode.value.trim() : ""
+    })
+  });
 }
 
 async function uploadBatchToServer(batch, moduleName, batchNo, batchCount, uploadSessionId) {
