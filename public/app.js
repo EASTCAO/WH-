@@ -179,7 +179,7 @@ function applyTheme(theme) {
     toggle.setAttribute("aria-pressed", String(finalTheme === "dark"));
     toggle.setAttribute("aria-label", finalTheme === "dark" ? "切换浅色模式" : "切换深色模式");
     const text = toggle.querySelector(".theme-toggle-text");
-    if (text) text.textContent = finalTheme === "dark" ? "浅色" : "深色";
+    if (text) text.textContent = finalTheme === "dark" ? "浅色模式" : "深色模式";
   });
 }
 
