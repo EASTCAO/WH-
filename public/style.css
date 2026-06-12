@@ -8065,6 +8065,11 @@ body[data-theme="dark"] .top-actions .theme-toggle-icon {
   text-transform: none !important;
 }
 
+.topbar h1::before {
+  content: none !important;
+  display: none !important;
+}
+
 .admin-results-preview .winner-card.rank-1,
 body[data-theme="dark"] .admin-results-preview .winner-card.rank-1 {
   border-color: rgba(190, 139, 30, 0.58) !important;
