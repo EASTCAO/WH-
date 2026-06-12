@@ -7977,6 +7977,73 @@ body[data-theme="dark"] .layout-side .admin-controls button:not(:disabled):hover
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.26) !important;
 }
 
+.top-actions .theme-toggle {
+  width: 34px !important;
+  min-width: 34px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+  border: 1px solid var(--ui-line) !important;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  color: #111111 !important;
+  box-shadow: none !important;
+}
+
+.top-actions .theme-toggle:hover {
+  transform: translateY(-1px);
+  border-color: var(--ui-line-strong) !important;
+  background: #f6f6f3 !important;
+  color: #111111 !important;
+}
+
+.top-actions .theme-toggle-icon {
+  position: relative;
+  width: 16px !important;
+  height: 16px !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  box-shadow: inset 5px -5px 0 0 currentColor !important;
+  transform: rotate(-12deg);
+}
+
+.top-actions .theme-toggle-icon::before,
+.top-actions .theme-toggle-icon::after {
+  content: none !important;
+}
+
+body[data-theme="dark"] .top-actions .theme-toggle {
+  border-color: rgba(245, 242, 232, 0.16) !important;
+  background: rgba(245, 242, 232, 0.06) !important;
+  color: #f5f2e8 !important;
+}
+
+body[data-theme="dark"] .top-actions .theme-toggle:hover {
+  border-color: rgba(245, 242, 232, 0.3) !important;
+  background: rgba(245, 242, 232, 0.1) !important;
+  color: #ffffff !important;
+}
+
+body[data-theme="dark"] .top-actions .theme-toggle-icon {
+  width: 8px !important;
+  height: 8px !important;
+  border: 2px solid currentColor !important;
+  background: currentColor !important;
+  box-shadow:
+    0 -8px 0 -3px currentColor,
+    0 8px 0 -3px currentColor,
+    8px 0 0 -3px currentColor,
+    -8px 0 0 -3px currentColor,
+    6px 6px 0 -3px currentColor,
+    -6px 6px 0 -3px currentColor,
+    6px -6px 0 -3px currentColor,
+    -6px -6px 0 -3px currentColor !important;
+  transform: none;
+}
+
 .admin-results-preview .winner-card.rank-1,
 body[data-theme="dark"] .admin-results-preview .winner-card.rank-1 {
   border-color: rgba(190, 139, 30, 0.58) !important;
