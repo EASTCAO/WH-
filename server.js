@@ -129,8 +129,21 @@ function createPeriod(id, source = {}) {
     name: source.name || periodName(id),
     votingOpen: Boolean(source.votingOpen),
     resultsPublished: Boolean(source.resultsPublished),
+    moduleVoters: normalizeModuleVoters(source.moduleVoters),
     createdAt: source.createdAt || new Date().toISOString()
   };
+}
+
+function normalizeModuleVoters(source) {
+  const result = {};
+  if (!source || typeof source !== "object") return result;
+  for (const module of MODULES) {
+    const raw = source[module.name];
+    if (!Array.isArray(raw)) continue;
+    const names = [...new Set(raw.map(normalizeName).filter(Boolean))];
+    if (names.length) result[module.name] = names;
+  }
+  return result;
 }
 
 function nextPeriodId(id) {
@@ -152,6 +165,7 @@ function ensurePeriods(db) {
   }
   for (const entry of db.entries || []) entry.periodId ||= db.currentPeriodId;
   for (const ballot of db.ballots || []) ballot.periodId ||= db.currentPeriodId;
+  for (const period of db.periods) period.moduleVoters = normalizeModuleVoters(period.moduleVoters);
   db.votingOpen = Boolean(current.votingOpen);
   db.resultsPublished = Boolean(current.resultsPublished);
   db.periods.sort((a, b) => b.id.localeCompare(a.id));
@@ -1779,7 +1793,8 @@ async function handlePeriodUpdate(req, res) {
     const id = nextPeriodId(db.currentPeriodId);
     let period = db.periods.find(item => item.id === id);
     if (!period) {
-      period = createPeriod(id);
+      const previous = db.periods.find(item => item.id === db.currentPeriodId);
+      period = createPeriod(id, { moduleVoters: previous && previous.moduleVoters });
       db.periods.push(period);
     }
     db.currentPeriodId = period.id;
@@ -1789,6 +1804,27 @@ async function handlePeriodUpdate(req, res) {
       return sendJson(res, 404, { error: "璇勪紭鏈堜唤涓嶅瓨鍦?" });
     }
     db.currentPeriodId = periodId;
+  } else if (action === "delete") {
+    const periodId = normalizeName(payload.periodId);
+    if (!db.periods.some(period => period.id === periodId)) {
+      return sendJson(res, 404, { error: "评优月份不存在" });
+    }
+    if (db.periods.length <= 1) {
+      return sendJson(res, 400, { error: "至少需要保留一个评优月份" });
+    }
+    const removedEntries = (db.entries || []).filter(entry => (entry.periodId || db.currentPeriodId) === periodId);
+    const removedIds = new Set(removedEntries.map(entry => entry.id));
+    db.entries = (db.entries || []).filter(entry => (entry.periodId || db.currentPeriodId) !== periodId);
+    db.ballots = (db.ballots || []).filter(ballot => (ballot.periodId || db.currentPeriodId) !== periodId);
+    db.tiebreakers = (db.tiebreakers || []).filter(item => (item.periodId || db.currentPeriodId) !== periodId);
+    db.tiebreakerBallots = (db.tiebreakerBallots || []).filter(ballot => (ballot.periodId || db.currentPeriodId) !== periodId);
+    db.periods = db.periods.filter(period => period.id !== periodId);
+    if (db.currentPeriodId === periodId) {
+      db.periods.sort((a, b) => b.id.localeCompare(a.id));
+      db.currentPeriodId = db.periods[0].id;
+    }
+    db.nextSequence = (db.entries || []).reduce((max, entry) => Math.max(max, entry.sequence || 0), 0) + 1;
+    for (const entryId of removedIds) removeEntryFiles(entryId);
   } else {
     return sendJson(res, 400, { error: "鏈煡鐨勬湀浠芥搷浣?" });
   }
@@ -1828,6 +1864,57 @@ async function handlePhotographerUpdate(req, res) {
 
   writeDb(db);
   sendJson(res, 200, { ok: true, photographers: db.photographers });
+}
+
+function votingStatusFor(db) {
+  const period = currentPeriod(db);
+  const moduleVoters = period.moduleVoters || {};
+  const votedByModule = {};
+  for (const ballot of currentBallots(db)) {
+    (votedByModule[ballot.moduleName] ||= new Set()).add(ballot.voter);
+  }
+  let allDone = true;
+  const modules = MODULES.map(module => {
+    const expected = Array.isArray(moduleVoters[module.name]) ? moduleVoters[module.name] : [];
+    const votedSet = votedByModule[module.name] || new Set();
+    const voted = expected.filter(name => votedSet.has(name));
+    const notVoted = expected.filter(name => !votedSet.has(name));
+    const extra = [...votedSet].filter(name => !expected.includes(name));
+    if (notVoted.length) allDone = false;
+    return {
+      id: module.id,
+      name: module.name,
+      voteLimit: module.voteLimit,
+      expected,
+      voted,
+      notVoted,
+      extra
+    };
+  });
+  const hasAnyExpected = modules.some(item => item.expected.length);
+  return { modules, allDone: hasAnyExpected && allDone, hasAnyExpected };
+}
+
+async function handleModuleVotersUpdate(req, res) {
+  const payload = await collectJson(req);
+  if (!isAdminPayload(payload)) return sendJson(res, 403, { error: "管理员口令不正确" });
+
+  const moduleName = normalizeName(payload.moduleName);
+  if (!MODULE_BY_NAME.has(moduleName)) return sendJson(res, 400, { error: "模块不存在" });
+  const voters = Array.isArray(payload.voters)
+    ? [...new Set(payload.voters.map(normalizeName).filter(Boolean))]
+    : [];
+
+  const db = readDb();
+  const period = currentPeriod(db);
+  period.moduleVoters ||= {};
+  const roster = new Set(db.photographers || []);
+  const filtered = voters.filter(name => roster.has(name));
+  if (filtered.length) period.moduleVoters[moduleName] = filtered;
+  else delete period.moduleVoters[moduleName];
+
+  writeDb(db);
+  sendJson(res, 200, { ok: true, moduleVoters: period.moduleVoters, status: votingStatusFor(db) });
 }
 
 function handleApi(req, res) {
@@ -1951,6 +2038,16 @@ function handleApi(req, res) {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/api/admin/voting-status") {
+    if (!canViewAdmin(url)) {
+      sendJson(res, 403, { error: "管理员口令不正确" });
+      return;
+    }
+    const period = currentPeriod(db);
+    sendJson(res, 200, { status: votingStatusFor(db), moduleVoters: period.moduleVoters || {} });
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/api/admin/archive") {
     handleAdminArchive(req, res, url);
     return;
@@ -2028,6 +2125,11 @@ function handleApi(req, res) {
 
   if (req.method === "POST" && url.pathname === "/api/photographers") {
     handlePhotographerUpdate(req, res).catch(error => sendJson(res, 400, { error: error.message }));
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/admin/module-voters") {
+    handleModuleVotersUpdate(req, res).catch(error => sendJson(res, 400, { error: error.message }));
     return;
   }
 

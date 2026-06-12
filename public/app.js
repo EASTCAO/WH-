@@ -129,6 +129,7 @@ const cancelNextPeriod = document.querySelector("#cancelNextPeriod");
 const confirmNextPeriod = document.querySelector("#confirmNextPeriod");
 const currentPeriodPreview = document.querySelector("#currentPeriodPreview");
 const nextPeriodPreview = document.querySelector("#nextPeriodPreview");
+const periodCalendar = document.querySelector("#periodCalendar");
 
 const imageViewer = document.querySelector("#imageViewer");
 const viewerTitle = document.querySelector("#viewerTitle");
@@ -677,12 +678,45 @@ function renderPeriodAdmin() {
   periodAdmin.hidden = !adminMode;
   if (!adminMode) return;
 
-  periodSelect.innerHTML = periods.map(period => `
-    <option value="${escapeHtml(period.id)}"${period.id === currentPeriodId ? " selected" : ""}>
-      ${escapeHtml(period.name || period.id)}
-    </option>
-  `).join("");
+  periodSelect.textContent = currentPeriodName || currentPeriodId || "选择月份";
+  periodSelect.dataset.periodId = currentPeriodId || "";
   periodStatus.textContent = `当前：${currentPeriodName || currentPeriodId}`;
+  renderPeriodCalendar();
+}
+
+function renderPeriodCalendar() {
+  if (!periodCalendar) return;
+  const monthFormatter = new Intl.DateTimeFormat("zh-CN", { month: "short" });
+  periodCalendar.innerHTML = periods.map(period => {
+    const [year, month] = String(period.id || "").split("-");
+    const monthNumber = Number(month);
+    const date = Number(year) && monthNumber ? new Date(Number(year), monthNumber - 1, 1) : null;
+    const monthLabel = date ? monthFormatter.format(date) : (period.name || period.id);
+    const yearLabel = date ? `${date.getFullYear()}` : "";
+    const isActive = period.id === currentPeriodId;
+    return `
+      <div class="period-month-card${isActive ? " active" : ""}">
+        <button type="button" class="period-month-switch" data-period-id="${escapeHtml(period.id)}">
+          <span>${escapeHtml(yearLabel)}</span>
+          <strong>${escapeHtml(monthLabel)}</strong>
+          <small>${escapeHtml(period.name || period.id)}</small>
+        </button>
+        <button type="button" class="period-month-delete" data-period-id="${escapeHtml(period.id)}" ${periods.length <= 1 ? "disabled" : ""}>删除</button>
+      </div>
+    `;
+  }).join("");
+  periodCalendar.querySelectorAll(".period-month-switch").forEach(button => {
+    button.addEventListener("click", async () => {
+      nextPeriodDialog?.close();
+      await updatePeriod("switch", { periodId: button.dataset.periodId });
+    });
+  });
+  periodCalendar.querySelectorAll(".period-month-delete").forEach(button => {
+    button.addEventListener("click", async event => {
+      event.stopPropagation();
+      await deletePeriod(button.dataset.periodId);
+    });
+  });
 }
 
 function renderBallotAdmin() {
@@ -771,6 +805,7 @@ function nextPeriodLabelFromCurrent() {
 function openNextPeriodDialog() {
   if (currentPeriodPreview) currentPeriodPreview.textContent = currentPeriodName || currentPeriodId || "当前评优";
   if (nextPeriodPreview) nextPeriodPreview.textContent = nextPeriodLabelFromCurrent();
+  renderPeriodCalendar();
   nextPeriodDialog?.showModal();
 }
 
@@ -1803,7 +1838,7 @@ async function updatePeriod(action, options = {}) {
     return;
   }
   const payload = { adminCode: adminCode.value.trim(), action };
-  if (action === "switch") payload.periodId = periodSelect.value;
+  if (action === "switch") payload.periodId = options.periodId || periodSelect.dataset.periodId;
   if (action === "createNext" && !options.skipConfirm && !confirm("确定新建下月评优并切换过去吗？新月份会从空作品开始，历史月份仍可切回查看。")) return;
 
   try {
@@ -1824,8 +1859,37 @@ async function updatePeriod(action, options = {}) {
   }
 }
 
+async function deletePeriod(periodId) {
+  if (!adminMode || !periodId) return;
+  const target = periods.find(period => period.id === periodId);
+  const label = target?.name || periodId;
+  if (periods.length <= 1) {
+    alert("至少需要保留一个评优月份");
+    return;
+  }
+  if (!confirm(`确定删除 ${label} 吗？该月份的作品、投票和加赛记录都会删除。`)) return;
+
+  try {
+    await fetchJson("/api/periods", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adminCode: adminCode.value.trim(), action: "delete", periodId })
+    });
+    activeModule = null;
+    resultDialogDismissed = false;
+    resetSelections();
+    await loadData();
+    activeModule = modules[0];
+    render();
+    renderPeriodCalendar();
+    showToast(`已删除 ${label}`);
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
 async function ensureSelectedPeriodActive() {
-  if (!adminMode || !periodSelect || !periodSelect.value || periodSelect.value === currentPeriodId) return true;
+  if (!adminMode || !periodSelect || !periodSelect.dataset.periodId || periodSelect.dataset.periodId === currentPeriodId) return true;
   try {
     await updatePeriod("switch");
     return true;
@@ -1903,8 +1967,8 @@ if (gallery) {
 }
 if (addPhotographer) addPhotographer.addEventListener("click", () => updatePhotographer("add"));
 if (periodSelect) {
-  periodSelect.addEventListener("change", () => {
-    if (adminMode) updatePeriod("switch");
+  periodSelect.addEventListener("click", () => {
+    if (adminMode) openNextPeriodDialog();
   });
 }
 if (createNextPeriod) createNextPeriod.addEventListener("click", () => {

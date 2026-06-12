@@ -67,8 +67,8 @@
             <p id="periodStatus" class="muted">按月份保存作品、投票记录和公布状态。</p>
           </div>
           <div class="period-controls">
-            <select id="periodSelect" aria-label="选择评优月份"></select>
-            <button id="createNextPeriod" type="button" aria-label="新建下月评优">📅 下月</button>
+            <button id="periodSelect" type="button" aria-label="选择评优月份">当前月份</button>
+            <button id="createNextPeriod" type="button" aria-label="打开月份管理">管理</button>
           </div>
         </div>
         <details id="moduleVotersAdmin" class="module-voters-admin admin-card" hidden>
@@ -198,7 +198,7 @@
     </dialog>
 
     <dialog id="nextPeriodDialog" class="admin-info-dialog">
-      <div class="admin-info-shell compact">
+      <div class="admin-info-shell compact period-shell">
         <header class="admin-info-header">
           <h2>新建下月评优</h2>
           <button id="closeNextPeriodDialog" class="round-button" type="button" aria-label="关闭">×</button>
@@ -215,6 +215,7 @@
               <strong id="nextPeriodPreview">下月评优</strong>
             </div>
           </div>
+          <div id="periodCalendar" class="period-calendar"></div>
           <p class="muted">新月份会从空作品开始，历史月份仍可切回查看。</p>
           <div class="dialog-actions">
             <button id="cancelNextPeriod" type="button">取消</button>
