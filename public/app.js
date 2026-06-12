@@ -1369,12 +1369,10 @@ function renderResults() {
   if (photographerResultCard) {
     photographerResultCard.hidden = !showPhotographerResultCard;
     if (showPhotographerResultCard) {
-      const awardedCount = modules.reduce((sum, module) => sum + moduleResultList(module.name).slice(0, resultLimitForModule(module.name)).length, 0);
       const label = currentPeriodName || currentPeriodId || "本期评优";
       photographerResultCard.innerHTML = `
         <span>评优结果</span>
         <strong>${escapeHtml(label)}</strong>
-        <small>${awardedCount} 个获奖名额 · 点击查看完整排名</small>
       `;
     }
   }
