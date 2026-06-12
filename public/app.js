@@ -128,8 +128,6 @@ const nextPeriodDialog = document.querySelector("#nextPeriodDialog");
 const closeNextPeriodDialog = document.querySelector("#closeNextPeriodDialog");
 const cancelNextPeriod = document.querySelector("#cancelNextPeriod");
 const confirmNextPeriod = document.querySelector("#confirmNextPeriod");
-const currentPeriodPreview = document.querySelector("#currentPeriodPreview");
-const nextPeriodPreview = document.querySelector("#nextPeriodPreview");
 const periodCalendar = document.querySelector("#periodCalendar");
 
 const imageViewer = document.querySelector("#imageViewer");
@@ -798,18 +796,7 @@ function openResultsPreviewDialog() {
   openAdminInfoDialog("后台票数预览", wrapper, { wide: true, resultsPreview: true });
 }
 
-function nextPeriodLabelFromCurrent() {
-  const match = String(currentPeriodId || "").match(/^(\d{4})-(\d{2})$/);
-  if (!match) return "下月评优";
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const date = new Date(year, month, 1);
-  return `${date.getFullYear()}年${date.getMonth() + 1}月评优`;
-}
-
 function openNextPeriodDialog() {
-  if (currentPeriodPreview) currentPeriodPreview.textContent = currentPeriodName || currentPeriodId || "当前评优";
-  if (nextPeriodPreview) nextPeriodPreview.textContent = nextPeriodLabelFromCurrent();
   renderPeriodCalendar();
   nextPeriodDialog?.showModal();
 }

@@ -205,26 +205,14 @@
     <dialog id="nextPeriodDialog" class="admin-info-dialog">
       <div class="admin-info-shell compact period-shell">
         <header class="admin-info-header">
-          <h2>新建下月评优</h2>
+          <h2>月份管理</h2>
           <button id="closeNextPeriodDialog" class="round-button" type="button" aria-label="关闭">×</button>
         </header>
         <div class="admin-info-body">
-          <div class="period-preview">
-            <div class="period-preview-card">
-              <span>当前月份</span>
-              <strong id="currentPeriodPreview">当前评优</strong>
-            </div>
-            <div class="period-preview-arrow" aria-hidden="true">→</div>
-            <div class="period-preview-card next">
-              <span>新建月份</span>
-              <strong id="nextPeriodPreview">下月评优</strong>
-            </div>
-          </div>
           <div id="periodCalendar" class="period-calendar"></div>
-          <p class="muted">新月份会从空作品开始，历史月份仍可切回查看。</p>
           <div class="dialog-actions">
-            <button id="cancelNextPeriod" type="button">取消</button>
-            <button id="confirmNextPeriod" type="button" class="status-toggle">确认新建</button>
+            <button id="cancelNextPeriod" type="button">关闭</button>
+            <button id="confirmNextPeriod" type="button" class="status-toggle">新建月份</button>
           </div>
         </div>
       </div>
