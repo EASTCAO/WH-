@@ -7909,6 +7909,74 @@ body[data-theme="dark"] .top-actions .theme-toggle:hover {
   color: #ffffff !important;
 }
 
+.layout-side .admin-controls button {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease !important;
+}
+
+.layout-side .admin-controls button::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+  transform: translate(-8px, -50%) scale(0.4);
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+
+.layout-side .admin-controls button:not(:disabled):hover {
+  transform: translateY(-2px) translateX(2px) !important;
+  border-color: #111111 !important;
+  background: #ffffff !important;
+  color: #111111 !important;
+  box-shadow: 0 10px 22px rgba(17, 17, 17, 0.09) !important;
+}
+
+.layout-side .admin-controls button:not(:disabled):hover::before {
+  opacity: 1;
+  transform: translate(0, -50%) scale(1);
+}
+
+.layout-side .admin-controls #statusToggle:not(:disabled):hover {
+  background: #f3f3ef !important;
+}
+
+.layout-side .admin-controls #publishToggle:not(:disabled):hover {
+  border-color: rgba(37, 111, 97, 0.42) !important;
+  background: #f1f8f6 !important;
+  color: #1d6f61 !important;
+}
+
+.layout-side .admin-controls #downloadArchive:not(:disabled):hover {
+  border-color: rgba(17, 17, 17, 0.3) !important;
+  background: #f7f7f4 !important;
+}
+
+.layout-side .admin-controls #clearCurrentPeriod:not(:disabled):hover {
+  border-color: rgba(180, 35, 24, 0.42) !important;
+  background: #fff1ef !important;
+  color: #b42318 !important;
+  box-shadow: 0 10px 22px rgba(180, 35, 24, 0.12) !important;
+}
+
+body[data-theme="dark"] .layout-side .admin-controls button:not(:disabled):hover {
+  border-color: rgba(245, 242, 232, 0.42) !important;
+  background: rgba(245, 242, 232, 0.1) !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.26) !important;
+}
+
 .admin-results-preview .winner-card.rank-1,
 body[data-theme="dark"] .admin-results-preview .winner-card.rank-1 {
   border-color: rgba(190, 139, 30, 0.58) !important;
