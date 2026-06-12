@@ -7745,3 +7745,51 @@ body[data-theme="dark"] .layout-side .admin-controls #statusToggle {
   background: var(--ui-surface-soft) !important;
   color: var(--ui-text) !important;
 }
+
+.voter-pill,
+.admin-info-body .voter-pill,
+.module-voters-list .voter-pill {
+  min-width: 64px !important;
+  height: 30px !important;
+  padding: 0 12px !important;
+  border: 1px solid var(--ui-line) !important;
+  border-radius: 999px !important;
+  background: #ffffff !important;
+  color: var(--ui-text) !important;
+  font-size: 13px !important;
+  font-weight: 720 !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  box-shadow: none !important;
+}
+
+.voter-pill:hover,
+.admin-info-body .voter-pill:hover,
+.module-voters-list .voter-pill:hover {
+  border-color: var(--ui-line-strong) !important;
+  background: #f4f4f0 !important;
+  color: var(--ui-text) !important;
+}
+
+.voter-pill.is-assigned,
+.admin-info-body .voter-pill.is-assigned,
+.module-voters-list .voter-pill.is-assigned {
+  border-color: var(--ui-text) !important;
+  background: var(--ui-text) !important;
+  color: #ffffff !important;
+}
+
+body[data-theme="dark"] .voter-pill,
+body[data-theme="dark"] .admin-info-body .voter-pill,
+body[data-theme="dark"] .module-voters-list .voter-pill {
+  background: var(--ui-surface-soft) !important;
+  color: var(--ui-text) !important;
+  border-color: var(--ui-line) !important;
+}
+
+body[data-theme="dark"] .voter-pill.is-assigned,
+body[data-theme="dark"] .admin-info-body .voter-pill.is-assigned,
+body[data-theme="dark"] .module-voters-list .voter-pill.is-assigned {
+  background: var(--ui-text) !important;
+  color: #101010 !important;
+}
