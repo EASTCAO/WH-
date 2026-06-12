@@ -7338,34 +7338,35 @@ body:not(.is-admin) .layout-main .workspace-status #selectedCount {
 
 .winner-card.rank-1 {
   min-height: 112px;
-  border-color: #111111 !important;
-  background: #111111 !important;
-  color: #ffffff !important;
+  border-color: rgba(190, 139, 30, 0.58) !important;
+  background: linear-gradient(135deg, #fff8df 0%, #ffffff 62%, #fff3c4 100%) !important;
+  color: var(--ui-text) !important;
+  box-shadow: 0 14px 28px rgba(190, 139, 30, 0.1) !important;
 }
 
 .winner-card.rank-1 strong,
 .winner-card.rank-1 .winner-score span {
-  color: #ffffff !important;
+  color: var(--ui-text) !important;
 }
 
 .winner-card.rank-1 .winner-score small {
-  color: #d7d7d0 !important;
+  color: #8a6116 !important;
 }
 
 .winner-card.rank-1 .winner-rank {
-  border-color: rgba(255, 255, 255, 0.26) !important;
-  background: rgba(255, 255, 255, 0.12) !important;
-  color: #ffffff !important;
+  border: 1px solid rgba(190, 139, 30, 0.34) !important;
+  background: #fff4c7 !important;
+  color: #7a520d !important;
 }
 
 .winner-card.rank-2 {
-  border-color: rgba(17, 17, 17, 0.34) !important;
-  background: #f3f3ef !important;
+  border-color: rgba(119, 128, 142, 0.38) !important;
+  background: linear-gradient(135deg, #f7f8fa 0%, #ffffff 68%, #edf0f4 100%) !important;
 }
 
 .winner-card.rank-3 {
-  border-color: rgba(17, 17, 17, 0.24) !important;
-  background: #fafaf7 !important;
+  border-color: rgba(168, 96, 38, 0.36) !important;
+  background: linear-gradient(135deg, #fff4eb 0%, #ffffff 68%, #ffe5cf 100%) !important;
 }
 
 .winner-bar {
@@ -7374,6 +7375,30 @@ body:not(.is-admin) .layout-main .workspace-status #selectedCount {
 
 .winner-bar i {
   background: var(--ui-text) !important;
+}
+
+.winner-card.rank-1::before {
+  background: #c69222 !important;
+}
+
+.winner-card.rank-2::before {
+  background: #8d97a6 !important;
+}
+
+.winner-card.rank-3::before {
+  background: #b46a32 !important;
+}
+
+.winner-card.rank-1 .winner-bar i {
+  background: #c69222 !important;
+}
+
+.winner-card.rank-2 .winner-bar i {
+  background: #8d97a6 !important;
+}
+
+.winner-card.rank-3 .winner-bar i {
+  background: #b46a32 !important;
 }
 
 .tie-admin-row {
@@ -7831,4 +7856,45 @@ body[data-theme="dark"] .period-shell .period-month-card {
 body[data-theme="dark"] .period-shell #confirmNextPeriod {
   background: var(--ui-text) !important;
   color: #101010 !important;
+}
+
+.admin-results-preview .winner-card.rank-1,
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-1 {
+  border-color: rgba(190, 139, 30, 0.58) !important;
+  background: linear-gradient(135deg, #fff8df 0%, #ffffff 62%, #fff3c4 100%) !important;
+  color: #111111 !important;
+  box-shadow: 0 14px 28px rgba(190, 139, 30, 0.1) !important;
+}
+
+.admin-results-preview .winner-card.rank-1 strong,
+.admin-results-preview .winner-card.rank-1 .winner-score span,
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-1 strong,
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-1 .winner-score span {
+  color: #111111 !important;
+}
+
+.admin-results-preview .winner-card.rank-1 .winner-score small,
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-1 .winner-score small {
+  color: #8a6116 !important;
+}
+
+.admin-results-preview .winner-card.rank-1 .winner-rank,
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-1 .winner-rank {
+  border: 1px solid rgba(190, 139, 30, 0.34) !important;
+  background: #fff4c7 !important;
+  color: #7a520d !important;
+}
+
+.admin-results-preview .winner-card.rank-2,
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-2 {
+  border-color: rgba(119, 128, 142, 0.38) !important;
+  background: linear-gradient(135deg, #f7f8fa 0%, #ffffff 68%, #edf0f4 100%) !important;
+  color: #111111 !important;
+}
+
+.admin-results-preview .winner-card.rank-3,
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-3 {
+  border-color: rgba(168, 96, 38, 0.36) !important;
+  background: linear-gradient(135deg, #fff4eb 0%, #ffffff 68%, #ffe5cf 100%) !important;
+  color: #111111 !important;
 }

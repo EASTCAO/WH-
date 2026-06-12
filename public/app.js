@@ -764,6 +764,7 @@ function openAdminInfoDialog(title, contentNode, options = {}) {
   if (downloadDialogPoster) {
     downloadDialogPoster.hidden = !options.resultsPreview;
     downloadDialogPoster.disabled = !options.resultsPreview;
+    if (options.resultsPreview) downloadDialogPoster.textContent = "下载完整结果图";
   }
   adminInfoBody.innerHTML = "";
   adminInfoBody.appendChild(contentNode.cloneNode(true));
@@ -2109,20 +2110,18 @@ function drawResultPoster() {
     return;
   }
 
-  const RANK_LABEL = ["🥇", "🥈", "🥉"];
-  // Brighter medal tones so they read on the dark award cards.
-  const RANK_COLOR = ["#f0c14b", "#cfd3d8", "#e0935a"];
+  const RANK_LABEL = ["1", "2", "3"];
+  const RANK_COLOR = ["#b98514", "#77808e", "#a86026"];
   const FONT = '"PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif';
 
-  // Palette — strong light/dark split between winners and the rest.
   const INK = "#1a1c1f";
-  const PAGE_BG = "#f2efe8";
-  const AWARD_BG = "#1a1c1f";       // dark card = 获奖
-  const AWARD_TEXT = "#ffffff";
-  const AWARD_SUB = "#c9b48a";      // warm gold-ish subtext on dark
-  const REST_BG = "#ffffff";        // light card = 未获奖
+  const PAGE_BG = "#f6f6f3";
+  const REST_BG = "#ffffff";
   const REST_TEXT = "#1a1c1f";
   const REST_SUB = "#8a8f96";
+  const AWARD_BG = ["#fff8df", "#f7f8fa", "#fff4eb"];
+  const AWARD_BORDER = ["#d4a134", "#b7bec8", "#c9864a"];
+  const AWARD_SUB = ["#8a6116", "#667085", "#9a5b22"];
 
   // Layout metrics (logical px).
   const W = 900;
@@ -2149,8 +2148,8 @@ function drawResultPoster() {
   ctx.fillStyle = PAGE_BG;
   ctx.fillRect(0, 0, W, H);
   // Top accent bar.
-  ctx.fillStyle = INK;
-  ctx.fillRect(0, 0, W, 10);
+  ctx.fillStyle = "#111111";
+  ctx.fillRect(padX, 36, 44, 6);
 
   const periodLabel = currentPeriodName || currentPeriodId || "本期";
 
@@ -2158,7 +2157,7 @@ function drawResultPoster() {
   ctx.fillStyle = INK;
   ctx.textAlign = "left";
   ctx.font = `800 40px ${FONT}`;
-  ctx.fillText(`🏆 ${periodLabel} 作品评优结果`, padX, 78);
+  ctx.fillText(`${periodLabel} 作品评优结果`, padX, 78);
   ctx.fillStyle = "#6b6f76";
   ctx.font = `400 20px ${FONT}`;
   const today = new Date();
@@ -2190,29 +2189,41 @@ function drawResultPoster() {
     block.rows.forEach((entry, index) => {
       const rowTop = y;
       const midY = rowTop + rowH / 2;
-      const isAward = index < block.awardLimit;
       const isMedal = index < 3;
-      const cardBg = isAward ? AWARD_BG : REST_BG;
-      const mainText = isAward ? AWARD_TEXT : REST_TEXT;
-      const subText = isAward ? AWARD_SUB : REST_SUB;
+      const isAward = index < block.awardLimit;
+      const awardTone = Math.min(index, 2);
+      const cardBg = isAward ? AWARD_BG[awardTone] : REST_BG;
+      const border = isAward ? AWARD_BORDER[awardTone] : "#e3e0d8";
+      const mainText = REST_TEXT;
+      const subText = isAward ? AWARD_SUB[awardTone] : REST_SUB;
 
       // Row card.
       ctx.fillStyle = cardBg;
       roundRect(ctx, padX, rowTop, W - padX * 2, rowH, 12);
       ctx.fill();
-      // Light cards get a hairline border so they don't melt into the page.
-      if (!isAward) {
-        ctx.strokeStyle = "#e3e0d8";
-        ctx.lineWidth = 1;
-        roundRect(ctx, padX, rowTop, W - padX * 2, rowH, 12);
-        ctx.stroke();
+      ctx.strokeStyle = border;
+      ctx.lineWidth = isAward ? 1.5 : 1;
+      roundRect(ctx, padX, rowTop, W - padX * 2, rowH, 12);
+      ctx.stroke();
+
+      if (isAward) {
+        ctx.fillStyle = AWARD_BORDER[awardTone];
+        roundRect(ctx, padX, rowTop + 12, 5, rowH - 24, 3);
+        ctx.fill();
       }
 
       // Rank badge.
       ctx.textAlign = "center";
       if (isMedal) {
-        ctx.font = `400 32px ${FONT}`;
-        ctx.fillText(RANK_LABEL[index], padX + 36, midY - 4);
+        ctx.fillStyle = AWARD_BG[index];
+        ctx.strokeStyle = AWARD_BORDER[index];
+        ctx.lineWidth = 1.5;
+        roundRect(ctx, padX + 18, midY - 24, 38, 32, 16);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = RANK_COLOR[index];
+        ctx.font = `900 20px ${FONT}`;
+        ctx.fillText(RANK_LABEL[index], padX + 37, midY - 8);
       } else {
         ctx.fillStyle = mainText;
         ctx.font = `800 24px ${FONT}`;
@@ -2254,7 +2265,7 @@ function drawResultPoster() {
   ctx.textAlign = "center";
   ctx.fillStyle = "#9a9da3";
   ctx.font = `400 16px ${FONT}`;
-  ctx.fillText("作品评优系统 · 深色卡片为获奖名次", W / 2, H - footerH / 2);
+  ctx.fillText("作品评优系统 · 浅色高亮为获奖名次", W / 2, H - footerH / 2);
 
   canvas.toBlob(blob => {
     if (!blob) {
@@ -2268,7 +2279,7 @@ function drawResultPoster() {
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(link.href), 4000);
-    showToast("海报已下载，可直接转发到企业微信群");
+    showToast("完整结果图已下载，可直接转发到企业微信群");
   }, "image/png");
 }
 
