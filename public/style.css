@@ -8110,3 +8110,168 @@ body[data-theme="dark"] .admin-results-preview .winner-card.rank-3 {
   background: linear-gradient(135deg, #fff4eb 0%, #ffffff 68%, #ffe5cf 100%) !important;
   color: #111111 !important;
 }
+
+/* Final dark-mode workspace cleanup: keep the artwork area consistently dark. */
+body[data-theme="dark"] .layout-main,
+body[data-theme="dark"] .layout-main > *,
+body[data-theme="dark"] .workspace-status,
+body[data-theme="dark"] .workspace-status .vote-toolbar,
+body[data-theme="dark"] .workspace-status .welcome-panel,
+body[data-theme="dark"] .module-board,
+body[data-theme="dark"] .gallery,
+body[data-theme="dark"] .submit-zone,
+body[data-theme="dark"] .tiebreaker-panel,
+body[data-theme="dark"] .results-panel {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface) !important;
+  color: var(--ui-text) !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="dark"] .gallery,
+body[data-theme="dark"] .gallery-drop-zone,
+body[data-theme="dark"] .empty,
+body[data-theme="dark"] .entry-card,
+body[data-theme="dark"] .media-preview-card,
+body[data-theme="dark"] .result-module,
+body[data-theme="dark"] .result-dialog-module,
+body[data-theme="dark"] .result-dialog-row,
+body[data-theme="dark"] .photographer-result-card {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface-soft) !important;
+  color: var(--ui-text) !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="dark"] .layout-main .module-card,
+body[data-theme="dark"] .layout-side .module-card,
+body[data-theme="dark"] .layout-main .module-card.done,
+body[data-theme="dark"] .layout-main .module-card.started,
+body[data-theme="dark"] .layout-side .module-card.done,
+body[data-theme="dark"] .layout-side .module-card.started {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface-soft) !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .layout-main .module-card.active,
+body[data-theme="dark"] .layout-side .module-card.active,
+body[data-theme="dark"]:not(.is-admin) .layout-main .module-card.active,
+body[data-theme="dark"].is-admin .layout-main .module-card.active {
+  border-color: var(--ui-line-strong) !important;
+  background: #2a2a28 !important;
+  color: var(--ui-text) !important;
+  box-shadow: inset 0 0 0 1px var(--ui-line-strong) !important;
+}
+
+body[data-theme="dark"] .layout-main .module-card:hover,
+body[data-theme="dark"] .layout-side .module-card:hover,
+body[data-theme="dark"]:not(.is-admin) .layout-main .module-card:hover,
+body[data-theme="dark"].is-admin .layout-main .module-card:hover {
+  border-color: var(--ui-line-strong) !important;
+  background: #252523 !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .section-heading h2,
+body[data-theme="dark"] .module-name,
+body[data-theme="dark"] .entry-title,
+body[data-theme="dark"] .entry-card strong,
+body[data-theme="dark"] .gallery-drop-zone strong,
+body[data-theme="dark"] .vote-toolbar strong,
+body[data-theme="dark"] .welcome-panel h2,
+body[data-theme="dark"] .photographer-result-card span {
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .section-heading span,
+body[data-theme="dark"] .module-status,
+body[data-theme="dark"] .module-stats,
+body[data-theme="dark"] .module-progress,
+body[data-theme="dark"] .module-uploaded,
+body[data-theme="dark"] .module-drop-text,
+body[data-theme="dark"] .entry-meta,
+body[data-theme="dark"] .entry-hint,
+body[data-theme="dark"] .gallery-drop-zone span,
+body[data-theme="dark"] .welcome-panel p,
+body[data-theme="dark"] #selectedCount,
+body[data-theme="dark"] .status,
+body[data-theme="dark"] .muted {
+  color: var(--ui-text-soft) !important;
+}
+
+body[data-theme="dark"] .folder-icon,
+body[data-theme="dark"] .folder-icon::before {
+  background: #f4f4ef !important;
+}
+
+body[data-theme="dark"] .folder-icon span {
+  background: rgba(16, 16, 16, 0.18) !important;
+}
+
+body[data-theme="dark"] .vote-check,
+body[data-theme="dark"] .delete-entry {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface) !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .gallery.dragging,
+body[data-theme="dark"] .gallery.dragging .gallery-drop-zone {
+  border-color: var(--ui-line-strong) !important;
+  background: #252523 !important;
+}
+
+body[data-theme="dark"] .layout-main .gallery,
+body[data-theme="dark"]:not(.is-admin) .layout-main .gallery,
+body[data-theme="dark"].is-admin .layout-main .gallery,
+body[data-theme="dark"] .layout-main .gallery-drop-zone,
+body[data-theme="dark"]:not(.is-admin) .layout-main .gallery-drop-zone,
+body[data-theme="dark"].is-admin .layout-main .gallery-drop-zone {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface) !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .layout-main .gallery .entry-card,
+body[data-theme="dark"]:not(.is-admin) .layout-main .gallery .entry-card,
+body[data-theme="dark"].is-admin .layout-main .gallery .entry-card,
+body[data-theme="dark"] .layout-main .gallery .entry-card.selected,
+body[data-theme="dark"]:not(.is-admin) .layout-main .gallery .entry-card.selected,
+body[data-theme="dark"].is-admin .layout-main .gallery .entry-card.selected {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface-soft) !important;
+  color: var(--ui-text) !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="dark"] .layout-main .gallery .entry-card:hover,
+body[data-theme="dark"]:not(.is-admin) .layout-main .gallery .entry-card:hover,
+body[data-theme="dark"].is-admin .layout-main .gallery .entry-card:hover {
+  border-color: var(--ui-line-strong) !important;
+  background: #252523 !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .layout-main .module-board .module-card,
+body[data-theme="dark"]:not(.is-admin) .layout-main .module-board .module-card,
+body[data-theme="dark"].is-admin .layout-main .module-board .module-card,
+body[data-theme="dark"] .layout-main .module-board .module-card.done,
+body[data-theme="dark"]:not(.is-admin) .layout-main .module-board .module-card.done,
+body[data-theme="dark"].is-admin .layout-main .module-board .module-card.done,
+body[data-theme="dark"] .layout-main .module-board .module-card.started,
+body[data-theme="dark"]:not(.is-admin) .layout-main .module-board .module-card.started,
+body[data-theme="dark"].is-admin .layout-main .module-board .module-card.started {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface-soft) !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .layout-main .module-board .module-card.active,
+body[data-theme="dark"]:not(.is-admin) .layout-main .module-board .module-card.active,
+body[data-theme="dark"].is-admin .layout-main .module-board .module-card.active {
+  border-color: var(--ui-line-strong) !important;
+  background: #2a2a28 !important;
+  color: var(--ui-text) !important;
+  box-shadow: inset 0 0 0 1px var(--ui-line-strong) !important;
+}
