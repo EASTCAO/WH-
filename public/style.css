@@ -7616,7 +7616,6 @@ body.is-admin .layout-side .admin-controls #publishToggle {
   color: var(--ui-text) !important;
 }
 
-body.is-admin .layout-side .admin-controls #downloadPoster,
 body.is-admin .layout-side .admin-controls #downloadArchive {
   border-color: var(--ui-line) !important;
   background: #ffffff !important;
@@ -7698,7 +7697,6 @@ body[data-theme="dark"]:not(.is-admin) .photographer-result-card {
 .layout-side .admin-controls .status-toggle,
 .layout-side .admin-controls #statusToggle,
 .layout-side .admin-controls #publishToggle,
-.layout-side .admin-controls #downloadPoster,
 .layout-side .admin-controls #downloadArchive {
   border: 1px solid var(--ui-line) !important;
   background: #ffffff !important;

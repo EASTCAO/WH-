@@ -87,7 +87,6 @@ const adminToggle = document.querySelector("#adminToggle");
 const statusToggle = document.querySelector("#statusToggle");
 const publishToggle = document.querySelector("#publishToggle");
 const downloadArchive = document.querySelector("#downloadArchive");
-const downloadPoster = document.querySelector("#downloadPoster");
 const clearCurrentPeriod = document.querySelector("#clearCurrentPeriod");
 const optimizeStatus = document.querySelector("#optimizeStatus");
 const adminPanel = document.querySelector("#adminPanel");
@@ -944,10 +943,6 @@ function renderStatusControls() {
     downloadArchive.hidden = !adminMode;
     downloadArchive.disabled = !adminMode;
     downloadArchive.textContent = "\u4e0b\u8f7d\u5f52\u6863";
-  }
-  if (downloadPoster) {
-    downloadPoster.hidden = !adminMode;
-    downloadPoster.disabled = !adminMode;
   }
   if (clearCurrentPeriod) clearCurrentPeriod.hidden = !adminMode;
   submitVote.disabled = !votingOpen || !voterName() || isSubmittingVote;
@@ -2079,18 +2074,6 @@ if (downloadArchive) {
     showToast("正在生成本月归档，请等待浏览器下载完成");
   });
 }
-if (downloadPoster) {
-  downloadPoster.addEventListener("click", () => {
-    if (!adminMode) return;
-    try {
-      drawResultPoster();
-    } catch (error) {
-      console.error(error);
-      showToast("生成海报失败：" + (error?.message || "未知错误"), "error");
-    }
-  });
-}
-
 function posterModuleBlocks() {
   // All ranked works per module (not just winners), in MODULES order.
   // awardLimit marks how many of the top rows count as "获奖" for highlighting.
