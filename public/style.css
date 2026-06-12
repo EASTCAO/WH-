@@ -8474,8 +8474,25 @@ body[data-theme="dark"] .admin-info-header .round-button {
   color: var(--ui-text) !important;
 }
 
+body[data-theme="dark"] #closeResultDialog,
+body[data-theme="dark"] #closeAdminInfoDialog,
+body[data-theme="dark"] #closePreview {
+  border-color: var(--ui-line) !important;
+  background: #202020 !important;
+  color: var(--ui-text) !important;
+  box-shadow: none !important;
+}
+
 body[data-theme="dark"] .result-dialog-header .round-button:hover,
 body[data-theme="dark"] .admin-info-header .round-button:hover {
+  border-color: var(--ui-line-strong) !important;
+  background: #2a2a28 !important;
+  color: #ffffff !important;
+}
+
+body[data-theme="dark"] #closeResultDialog:hover,
+body[data-theme="dark"] #closeAdminInfoDialog:hover,
+body[data-theme="dark"] #closePreview:hover {
   border-color: var(--ui-line-strong) !important;
   background: #2a2a28 !important;
   color: #ffffff !important;
