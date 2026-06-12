@@ -8321,3 +8321,162 @@ body[data-theme="dark"] #voterLogout:hover {
   background: #252523 !important;
   color: #ffffff !important;
 }
+
+/* Final dark-mode result dialog cleanup. */
+body[data-theme="dark"] .result-dialog,
+body[data-theme="dark"] .admin-info-dialog {
+  background: transparent !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .result-dialog-shell,
+body[data-theme="dark"] .admin-info-shell {
+  border: 1px solid var(--ui-line) !important;
+  background: #151515 !important;
+  color: var(--ui-text) !important;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.56) !important;
+}
+
+body[data-theme="dark"] .result-dialog-header,
+body[data-theme="dark"] .admin-info-header {
+  border-bottom-color: var(--ui-line) !important;
+  background: #181818 !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .result-dialog-header p,
+body[data-theme="dark"] .admin-info-header p,
+body[data-theme="dark"] .result-dialog-module h3 span,
+body[data-theme="dark"] .rank-title small,
+body[data-theme="dark"] .result-dialog-row strong small,
+body[data-theme="dark"] .result-row small,
+body[data-theme="dark"] .winner-score small,
+body[data-theme="dark"] .admin-results-preview .muted {
+  color: var(--ui-text-soft) !important;
+}
+
+body[data-theme="dark"] .result-dialog-grid,
+body[data-theme="dark"] .admin-info-body,
+body[data-theme="dark"] .admin-results-preview,
+body[data-theme="dark"] .admin-results-preview .results {
+  background: #101010 !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .result-dialog-module,
+body[data-theme="dark"] .result-dialog-row,
+body[data-theme="dark"] .admin-results-preview .result-module,
+body[data-theme="dark"] .admin-results-preview .result-row,
+body[data-theme="dark"] .admin-results-preview .winner-card {
+  border-color: var(--ui-line) !important;
+  background: #202020 !important;
+  color: var(--ui-text) !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="dark"] .result-dialog-module h3,
+body[data-theme="dark"] .rank-title,
+body[data-theme="dark"] .result-dialog-row strong,
+body[data-theme="dark"] .admin-results-preview .result-module h3,
+body[data-theme="dark"] .admin-results-preview .result-row,
+body[data-theme="dark"] .admin-results-preview .winner-card strong,
+body[data-theme="dark"] .admin-results-preview .winner-score span {
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .result-dialog-row.rank-1,
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-1,
+body[data-theme="dark"] .admin-results-preview .result-row.result-rank-1 {
+  border-color: rgba(214, 167, 60, 0.72) !important;
+  background: linear-gradient(135deg, #312817 0%, #202020 62%, #3d3016 100%) !important;
+  color: var(--ui-text) !important;
+  box-shadow: 0 0 0 1px rgba(214, 167, 60, 0.16), 0 18px 36px rgba(0, 0, 0, 0.28) !important;
+}
+
+body[data-theme="dark"] .result-dialog-row.rank-2,
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-2,
+body[data-theme="dark"] .admin-results-preview .result-row.result-rank-2 {
+  border-color: rgba(185, 193, 204, 0.58) !important;
+  background: linear-gradient(135deg, #2a2d2f 0%, #202020 64%, #34383b 100%) !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .result-dialog-row.rank-3,
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-3,
+body[data-theme="dark"] .admin-results-preview .result-row.result-rank-3 {
+  border-color: rgba(200, 135, 69, 0.62) !important;
+  background: linear-gradient(135deg, #302118 0%, #202020 64%, #3c2618 100%) !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .rank-mark,
+body[data-theme="dark"] .winner-rank,
+body[data-theme="dark"] .result-row em {
+  border: 1px solid var(--ui-line) !important;
+  background: #2a2a28 !important;
+  color: var(--ui-text) !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="dark"] .rank-1 .rank-mark,
+body[data-theme="dark"] .winner-card.rank-1 .winner-rank,
+body[data-theme="dark"] .result-row.result-rank-1 em {
+  border-color: rgba(214, 167, 60, 0.54) !important;
+  background: #d6a73c !important;
+  color: #111111 !important;
+}
+
+body[data-theme="dark"] .rank-2 .rank-mark,
+body[data-theme="dark"] .winner-card.rank-2 .winner-rank,
+body[data-theme="dark"] .result-row.result-rank-2 em {
+  border-color: rgba(185, 193, 204, 0.52) !important;
+  background: #b9c1cc !important;
+  color: #111111 !important;
+}
+
+body[data-theme="dark"] .rank-3 .rank-mark,
+body[data-theme="dark"] .winner-card.rank-3 .winner-rank,
+body[data-theme="dark"] .result-row.result-rank-3 em {
+  border-color: rgba(200, 135, 69, 0.52) !important;
+  background: #c88745 !important;
+  color: #111111 !important;
+}
+
+body[data-theme="dark"] .rank-1 .rank-title,
+body[data-theme="dark"] .winner-card.rank-1 strong,
+body[data-theme="dark"] .winner-card.rank-1 .winner-score span {
+  color: #f4d37a !important;
+}
+
+body[data-theme="dark"] .rank-2 .rank-title,
+body[data-theme="dark"] .winner-card.rank-2 strong,
+body[data-theme="dark"] .winner-card.rank-2 .winner-score span {
+  color: #d7dde5 !important;
+}
+
+body[data-theme="dark"] .rank-3 .rank-title,
+body[data-theme="dark"] .winner-card.rank-3 strong,
+body[data-theme="dark"] .winner-card.rank-3 .winner-score span {
+  color: #e7a36a !important;
+}
+
+body[data-theme="dark"] .result-more summary,
+body[data-theme="dark"] .result-empty-state {
+  border-color: var(--ui-line) !important;
+  background: #202020 !important;
+  color: var(--ui-text-soft) !important;
+}
+
+body[data-theme="dark"] .result-dialog-header .round-button,
+body[data-theme="dark"] .admin-info-header .round-button {
+  border-color: var(--ui-line) !important;
+  background: #202020 !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .result-dialog-header .round-button:hover,
+body[data-theme="dark"] .admin-info-header .round-button:hover {
+  border-color: var(--ui-line-strong) !important;
+  background: #2a2a28 !important;
+  color: #ffffff !important;
+}
