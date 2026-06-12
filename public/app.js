@@ -123,6 +123,7 @@ const adminInfoDialog = document.querySelector("#adminInfoDialog");
 const adminInfoTitle = document.querySelector("#adminInfoTitle");
 const adminInfoBody = document.querySelector("#adminInfoBody");
 const closeAdminInfoDialog = document.querySelector("#closeAdminInfoDialog");
+const downloadDialogPoster = document.querySelector("#downloadDialogPoster");
 const nextPeriodDialog = document.querySelector("#nextPeriodDialog");
 const closeNextPeriodDialog = document.querySelector("#closeNextPeriodDialog");
 const cancelNextPeriod = document.querySelector("#cancelNextPeriod");
@@ -762,6 +763,10 @@ function openAdminInfoDialog(title, contentNode, options = {}) {
   if (!adminInfoDialog || !adminInfoTitle || !adminInfoBody || !contentNode) return;
   adminInfoTitle.textContent = title;
   adminInfoDialog.classList.toggle("wide", Boolean(options.wide));
+  if (downloadDialogPoster) {
+    downloadDialogPoster.hidden = !options.resultsPreview;
+    downloadDialogPoster.disabled = !options.resultsPreview;
+  }
   adminInfoBody.innerHTML = "";
   adminInfoBody.appendChild(contentNode.cloneNode(true));
   if (!adminInfoDialog.open) adminInfoDialog.showModal();
@@ -1980,10 +1985,24 @@ if (photographerResultCard) {
   });
 }
 if (closeAdminInfoDialog) closeAdminInfoDialog.addEventListener("click", () => adminInfoDialog?.close());
+if (downloadDialogPoster) {
+  downloadDialogPoster.addEventListener("click", () => {
+    if (!adminMode) return;
+    try {
+      drawResultPoster();
+    } catch (error) {
+      console.error(error);
+      showToast("生成图片失败：" + (error?.message || "未知错误"), "error");
+    }
+  });
+}
 if (closeNextPeriodDialog) closeNextPeriodDialog.addEventListener("click", () => nextPeriodDialog?.close());
 if (adminInfoDialog) {
   adminInfoDialog.addEventListener("click", event => {
     if (event.target === adminInfoDialog) adminInfoDialog.close();
+  });
+  adminInfoDialog.addEventListener("close", () => {
+    if (downloadDialogPoster) downloadDialogPoster.hidden = true;
   });
 }
 if (nextPeriodDialog) {

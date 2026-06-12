@@ -93,13 +93,22 @@
         </aside>
 
         <div class="layout-main">
-      <section id="welcomePanel" class="welcome-panel">
-        <div>
-          <span id="phaseBadge" class="phase-badge">评优准备中</span>
-          <h2 id="welcomeTitle">评优开始啦</h2>
-          <p id="welcomeText">输入自己的姓名进入投票，系统会自动隐藏摄影师信息，保持公平。</p>
-        </div>
-      </section>
+      <div class="workspace-status">
+        <section class="vote-toolbar">
+          <div>
+            <strong id="activeModuleTitle">图片（AI）</strong>
+            <span id="selectedCount">已选作品 0 / 3</span>
+          </div>
+        </section>
+
+        <section id="welcomePanel" class="welcome-panel">
+          <div>
+            <span id="phaseBadge" class="phase-badge">评优准备中</span>
+            <h2 id="welcomeTitle">评优开始啦</h2>
+            <p id="welcomeText">输入自己的姓名进入投票，系统会自动隐藏摄影师信息，保持公平。</p>
+          </div>
+        </section>
+      </div>
 
       <section class="module-board" aria-label="评优模块">
         <div class="section-heading">
@@ -112,13 +121,6 @@
           <strong>查看最终排名</strong>
         </button>
         <div id="uploadStatus" class="status"></div>
-      </section>
-
-      <section class="vote-toolbar">
-        <div>
-          <strong id="activeModuleTitle">图片（AI）</strong>
-          <span id="selectedCount">已选作品 0 / 3</span>
-        </div>
       </section>
 
       <section id="gallery" class="gallery" aria-live="polite"></section>
@@ -191,7 +193,10 @@
       <div class="admin-info-shell">
         <header class="admin-info-header">
           <h2 id="adminInfoTitle">后台信息</h2>
-          <button id="closeAdminInfoDialog" class="round-button" type="button" aria-label="关闭">×</button>
+          <div class="admin-info-actions">
+            <button id="downloadDialogPoster" class="download-dialog-poster" type="button" hidden>下载图片</button>
+            <button id="closeAdminInfoDialog" class="round-button" type="button" aria-label="关闭">×</button>
+          </div>
         </header>
         <div id="adminInfoBody" class="admin-info-body"></div>
       </div>

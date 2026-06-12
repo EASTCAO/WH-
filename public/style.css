@@ -6273,6 +6273,33 @@ body.is-admin .results-preview-admin > :not(summary) {
   font-size: 16px;
 }
 
+.admin-info-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.download-dialog-poster {
+  height: 34px !important;
+  min-width: 88px !important;
+  padding: 0 13px !important;
+  border-color: rgba(37, 111, 97, 0.22) !important;
+  border-radius: 999px !important;
+  background: var(--ui-accent-soft) !important;
+  color: var(--ui-accent) !important;
+  font-size: 13px !important;
+  font-weight: 760 !important;
+}
+
+.download-dialog-poster:hover {
+  border-color: rgba(37, 111, 97, 0.36) !important;
+  background: rgba(37, 111, 97, 0.13) !important;
+}
+
+.download-dialog-poster[hidden] {
+  display: none !important;
+}
+
 .admin-info-header .round-button {
   width: 34px !important;
   height: 34px !important;
@@ -6819,6 +6846,190 @@ body[data-theme="dark"].is-admin .layout-main .welcome-panel p span {
   background: rgba(255, 255, 255, 0.045);
   border-color: var(--ui-line);
   color: var(--ui-text-soft);
+}
+
+.workspace-status {
+  display: contents;
+}
+
+body.is-admin .workspace-status {
+  display: contents;
+}
+
+body.is-admin .layout-main .welcome-panel {
+  order: 1;
+}
+
+body.is-admin .layout-main .module-board {
+  order: 2;
+}
+
+body.is-admin .layout-main .vote-toolbar {
+  order: 3;
+}
+
+body.is-admin .layout-main .gallery {
+  order: 4;
+}
+
+body.is-admin .layout-main .submit-zone {
+  order: 5;
+}
+
+body.is-admin .layout-main .tiebreaker-panel {
+  order: 6;
+}
+
+body.is-admin .layout-main .results-panel {
+  order: 7;
+}
+
+body:not(.is-admin) .layout-main .workspace-status {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, auto);
+  align-items: center;
+  gap: 22px;
+  min-height: 82px;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--ui-line) !important;
+  background:
+    linear-gradient(90deg, rgba(251, 251, 248, 0.96), rgba(255, 255, 255, 0.9)) !important;
+}
+
+body:not(.is-admin) .layout-main .workspace-status .vote-toolbar,
+body:not(.is-admin) .layout-main .workspace-status .welcome-panel {
+  grid-row: 1;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none;
+}
+
+body:not(.is-admin) .layout-main .workspace-status .vote-toolbar {
+  grid-column: 1 !important;
+}
+
+body:not(.is-admin) .layout-main .workspace-status .vote-toolbar > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+}
+
+body:not(.is-admin) .layout-main .workspace-status .vote-toolbar strong {
+  min-width: 100%;
+  font-size: 22px !important;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+body:not(.is-admin) .layout-main .workspace-status #selectedCount {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border: 1px solid rgba(32, 37, 34, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--ui-text-soft);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+body:not(.is-admin) .layout-main .workspace-status .welcome-panel {
+  grid-column: 2 !important;
+  min-width: 0;
+  padding-left: 22px !important;
+  border-left: 1px solid rgba(32, 37, 34, 0.1) !important;
+}
+
+body:not(.is-admin) .layout-main .workspace-status .welcome-panel > div {
+  min-height: 0 !important;
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center !important;
+  justify-content: stretch;
+  gap: 9px 10px !important;
+}
+
+body:not(.is-admin) .layout-main .workspace-status .welcome-panel h2 {
+  min-width: 0;
+  max-width: 220px;
+  color: var(--ui-text);
+  font-size: 14px !important;
+  font-weight: 760;
+  line-height: 30px !important;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:not(.is-admin) .layout-main .workspace-status .phase-badge {
+  height: 30px !important;
+  min-height: 30px !important;
+  background: rgba(37, 111, 97, 0.1);
+  border-color: rgba(37, 111, 97, 0.18);
+}
+
+body:not(.is-admin) .layout-main .workspace-status .phase-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 999px;
+  background: var(--ui-accent);
+  opacity: 0.72;
+}
+
+body[data-theme="dark"]:not(.is-admin) .layout-main .workspace-status {
+  background:
+    linear-gradient(90deg, rgba(23, 28, 25, 0.94), rgba(27, 32, 29, 0.9)) !important;
+}
+
+body[data-theme="dark"]:not(.is-admin) .layout-main .workspace-status #selectedCount {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: var(--ui-line);
+}
+
+body[data-theme="dark"]:not(.is-admin) .layout-main .workspace-status .welcome-panel {
+  border-left-color: var(--ui-line) !important;
+}
+
+@media (max-width: 760px) {
+  body:not(.is-admin) .layout-main .workspace-status {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    min-height: 0;
+  }
+
+  body:not(.is-admin) .layout-main .workspace-status .vote-toolbar,
+  body:not(.is-admin) .layout-main .workspace-status .welcome-panel {
+    grid-column: 1 !important;
+    grid-row: auto;
+  }
+
+  body:not(.is-admin) .layout-main .workspace-status .welcome-panel {
+    min-width: 0;
+    padding-top: 10px !important;
+    padding-left: 0 !important;
+    border-top: 1px solid rgba(32, 37, 34, 0.1) !important;
+    border-left: 0 !important;
+  }
+
+  body:not(.is-admin) .layout-main .workspace-status .welcome-panel > div {
+    justify-content: flex-start;
+  }
+
+  body:not(.is-admin) .layout-main .workspace-status .welcome-panel h2 {
+    max-width: none;
+    text-align: left;
+  }
 }
 
 @media (max-width: 900px) {
