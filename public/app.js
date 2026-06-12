@@ -780,6 +780,12 @@ function bindResultPreviewActions(root = resultsBox) {
   });
 }
 
+function shortPeriodLabel() {
+  const source = currentPeriodName || currentPeriodId || "本期";
+  const match = String(source).match(/(\d{1,2})月/);
+  return match ? `${match[1]}月` : source;
+}
+
 function openResultsPreviewDialog() {
   if (!resultsBox) return;
   const wrapper = document.createElement("div");
@@ -1357,10 +1363,9 @@ function renderResults() {
   if (photographerResultCard) {
     photographerResultCard.hidden = !showPhotographerResultCard;
     if (showPhotographerResultCard) {
-      const label = currentPeriodName || currentPeriodId || "本期评优";
       photographerResultCard.innerHTML = `
         <span>评优结果</span>
-        <strong>${escapeHtml(label)}</strong>
+        <strong>${escapeHtml(shortPeriodLabel())}</strong>
       `;
     }
   }

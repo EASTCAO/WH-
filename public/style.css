@@ -7676,38 +7676,49 @@ body[data-theme="dark"].is-admin .layout-side .admin-controls #statusToggle.stat
 }
 
 body:not(.is-admin) .photographer-result-card {
-  min-height: 56px !important;
-  display: grid !important;
-  place-items: center !important;
-  gap: 2px !important;
-  padding: 10px 12px !important;
+  min-height: 42px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  padding: 8px 11px !important;
   border: 1px solid var(--ui-line) !important;
-  border-radius: 12px !important;
+  border-radius: 10px !important;
   background: #ffffff !important;
   color: var(--ui-text) !important;
-  text-align: center !important;
+  text-align: left !important;
   box-shadow: none !important;
 }
 
 body:not(.is-admin) .photographer-result-card span {
-  color: var(--ui-text-soft) !important;
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  line-height: 1.2 !important;
-}
-
-body:not(.is-admin) .photographer-result-card strong {
-  width: 100%;
   color: var(--ui-text) !important;
   font-size: 13px !important;
   font-weight: 820 !important;
-  line-height: 1.25 !important;
+  line-height: 1 !important;
+}
+
+body:not(.is-admin) .photographer-result-card strong {
+  width: auto;
+  min-width: 36px;
+  padding: 4px 8px;
+  border: 1px solid var(--ui-line);
+  border-radius: 999px;
+  color: var(--ui-text-soft) !important;
+  font-size: 12px !important;
+  font-weight: 760 !important;
+  line-height: 1 !important;
   text-align: center !important;
 }
 
 body:not(.is-admin) .photographer-result-card:hover {
   border-color: var(--ui-line-strong) !important;
   background: #fafaf7 !important;
+  transform: translateY(-1px);
+}
+
+body:not(.is-admin) .photographer-result-card:hover strong {
+  border-color: var(--ui-line-strong);
+  color: var(--ui-text) !important;
 }
 
 body[data-theme="dark"]:not(.is-admin) .photographer-result-card {
