@@ -8497,3 +8497,354 @@ body[data-theme="dark"] #closePreview:hover {
   background: #2a2a28 !important;
   color: #ffffff !important;
 }
+
+/* Final dark-mode contrast and surface consistency pass. */
+body[data-theme="dark"] {
+  --ui-bg: #101010;
+  --ui-bg-soft: #151515;
+  --ui-surface: #181818;
+  --ui-surface-soft: #202020;
+  --ui-surface-hover: #252523;
+  --ui-text: #f4f4ef;
+  --ui-text-soft: #c7c7be;
+  --ui-muted: #9f9e96;
+  --ui-line: rgba(244, 244, 239, 0.15);
+  --ui-line-strong: rgba(244, 244, 239, 0.34);
+  background: var(--ui-bg) !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .topbar,
+body[data-theme="dark"] .layout-side,
+body[data-theme="dark"] .layout-main,
+body[data-theme="dark"] .layout-side > *,
+body[data-theme="dark"] .layout-main > *,
+body[data-theme="dark"] .admin-panel,
+body[data-theme="dark"] .admin-controls,
+body[data-theme="dark"] .period-admin,
+body[data-theme="dark"] .photographer-admin,
+body[data-theme="dark"] .module-board,
+body[data-theme="dark"] .vote-toolbar,
+body[data-theme="dark"] .gallery,
+body[data-theme="dark"] .gallery-drop-zone,
+body[data-theme="dark"] .submit-zone,
+body[data-theme="dark"] .results-panel,
+body[data-theme="dark"] .welcome-panel,
+body[data-theme="dark"] .workspace-status,
+body[data-theme="dark"] .admin-card,
+body[data-theme="dark"] .module-voters-admin,
+body[data-theme="dark"] .voting-status-admin,
+body[data-theme="dark"] .ballot-admin,
+body[data-theme="dark"] .results-preview-admin,
+body[data-theme="dark"] .optimize-status,
+body[data-theme="dark"] .entry-card,
+body[data-theme="dark"] .media-preview-card,
+body[data-theme="dark"] .empty,
+body[data-theme="dark"] .result-module,
+body[data-theme="dark"] .result-row,
+body[data-theme="dark"] .winner-card,
+body[data-theme="dark"] .ballot-row,
+body[data-theme="dark"] .voting-status-row,
+body[data-theme="dark"] .tie-admin-row,
+body[data-theme="dark"] .period-month-card,
+body[data-theme="dark"] .admin-info-shell,
+body[data-theme="dark"] .preview-shell,
+body[data-theme="dark"] .result-dialog-shell {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface) !important;
+  color: var(--ui-text) !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="dark"] .module-card,
+body[data-theme="dark"] .module-card.done,
+body[data-theme="dark"] .module-card.started,
+body[data-theme="dark"] .result-dialog-module,
+body[data-theme="dark"] .result-dialog-row,
+body[data-theme="dark"] .photographer-result-card,
+body[data-theme="dark"] .admin-results-preview .result-module,
+body[data-theme="dark"] .admin-results-preview .result-row,
+body[data-theme="dark"] .admin-results-preview .winner-card {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface-soft) !important;
+  color: var(--ui-text) !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="dark"] .module-card:hover,
+body[data-theme="dark"] .entry-card:hover,
+body[data-theme="dark"] .result-dialog-row:hover,
+body[data-theme="dark"] .photographer-result-card:hover {
+  border-color: var(--ui-line-strong) !important;
+  background: var(--ui-surface-hover) !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .module-card.active,
+body[data-theme="dark"] .layout-main .module-card.active,
+body[data-theme="dark"] .layout-side .module-card.active,
+body[data-theme="dark"].is-admin .layout-main .module-card.active,
+body[data-theme="dark"]:not(.is-admin) .layout-main .module-card.active {
+  border-color: var(--ui-line-strong) !important;
+  background: #2a2a28 !important;
+  color: var(--ui-text) !important;
+  box-shadow: inset 0 0 0 1px var(--ui-line-strong) !important;
+}
+
+body[data-theme="dark"] h1,
+body[data-theme="dark"] h2,
+body[data-theme="dark"] h3,
+body[data-theme="dark"] h4,
+body[data-theme="dark"] strong,
+body[data-theme="dark"] b,
+body[data-theme="dark"] label,
+body[data-theme="dark"] summary,
+body[data-theme="dark"] .section-heading h2,
+body[data-theme="dark"] .module-name,
+body[data-theme="dark"] .entry-title,
+body[data-theme="dark"] .rank-title,
+body[data-theme="dark"] .result-dialog-module h3,
+body[data-theme="dark"] .result-module h3,
+body[data-theme="dark"] .winner-card strong,
+body[data-theme="dark"] .winner-score span,
+body[data-theme="dark"] .photographer-result-card strong,
+body[data-theme="dark"] .photographer-result-card span {
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] p,
+body[data-theme="dark"] small,
+body[data-theme="dark"] .muted,
+body[data-theme="dark"] .status,
+body[data-theme="dark"] .section-heading span,
+body[data-theme="dark"] .module-index,
+body[data-theme="dark"] .module-kind,
+body[data-theme="dark"] .module-status,
+body[data-theme="dark"] .module-stats,
+body[data-theme="dark"] .module-progress,
+body[data-theme="dark"] .module-uploaded,
+body[data-theme="dark"] .module-drop-text,
+body[data-theme="dark"] .entry-meta,
+body[data-theme="dark"] .entry-hint,
+body[data-theme="dark"] .gallery-drop-zone span,
+body[data-theme="dark"] .welcome-panel p,
+body[data-theme="dark"] .result-dialog-module h3 span,
+body[data-theme="dark"] .rank-title small,
+body[data-theme="dark"] .winner-score small,
+body[data-theme="dark"] .result-row small,
+body[data-theme="dark"] .ballot-row small,
+body[data-theme="dark"] #selectedCount {
+  color: var(--ui-text-soft) !important;
+}
+
+body[data-theme="dark"] .layout-side .admin-controls button,
+body[data-theme="dark"] .admin-controls button,
+body[data-theme="dark"] .period-controls button,
+body[data-theme="dark"] .photographer-tools button,
+body[data-theme="dark"] #adminToggle,
+body[data-theme="dark"] #statusToggle,
+body[data-theme="dark"] #publishToggle,
+body[data-theme="dark"] #downloadArchive,
+body[data-theme="dark"] #clearCurrentPeriod,
+body[data-theme="dark"] #createNextPeriod,
+body[data-theme="dark"] #submitVote,
+body[data-theme="dark"] .download-dialog-poster,
+body[data-theme="dark"] .folder-button,
+body[data-theme="dark"] .dialog-actions button,
+body[data-theme="dark"] .round-button,
+body[data-theme="dark"] .fit-button {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface-soft) !important;
+  color: var(--ui-text) !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="dark"] button:not(:disabled):hover,
+body[data-theme="dark"] .layout-side .admin-controls button:not(:disabled):hover,
+body[data-theme="dark"] .admin-controls button:not(:disabled):hover,
+body[data-theme="dark"] .period-controls button:not(:disabled):hover,
+body[data-theme="dark"] .photographer-tools button:not(:disabled):hover,
+body[data-theme="dark"] #adminToggle:not(:disabled):hover,
+body[data-theme="dark"] #statusToggle:not(:disabled):hover,
+body[data-theme="dark"] #publishToggle:not(:disabled):hover,
+body[data-theme="dark"] #downloadArchive:not(:disabled):hover,
+body[data-theme="dark"] #clearCurrentPeriod:not(:disabled):hover,
+body[data-theme="dark"] #createNextPeriod:not(:disabled):hover,
+body[data-theme="dark"] .download-dialog-poster:not(:disabled):hover,
+body[data-theme="dark"] .folder-button:not(:disabled):hover {
+  border-color: var(--ui-line-strong) !important;
+  background: var(--ui-surface-hover) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="dark"] button:disabled,
+body[data-theme="dark"] #submitVote:disabled,
+body[data-theme="dark"] .admin-controls button:disabled,
+body[data-theme="dark"] .dialog-actions button:disabled {
+  border-color: rgba(244, 244, 239, 0.08) !important;
+  background: #171717 !important;
+  color: rgba(244, 244, 239, 0.52) !important;
+  opacity: 1 !important;
+}
+
+body[data-theme="dark"] input,
+body[data-theme="dark"] select,
+body[data-theme="dark"] textarea {
+  border-color: var(--ui-line) !important;
+  background: #101010 !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] input::placeholder,
+body[data-theme="dark"] textarea::placeholder {
+  color: rgba(244, 244, 239, 0.42) !important;
+}
+
+body[data-theme="dark"] .admin-card summary,
+body[data-theme="dark"].is-admin .module-voters-admin summary,
+body[data-theme="dark"].is-admin .voting-status-admin summary,
+body[data-theme="dark"].is-admin .ballot-admin summary,
+body[data-theme="dark"].is-admin .results-preview-admin summary {
+  background: transparent !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .admin-card summary::after,
+body[data-theme="dark"].is-admin .module-voters-admin summary::after,
+body[data-theme="dark"].is-admin .voting-status-admin summary::after,
+body[data-theme="dark"].is-admin .ballot-admin summary::after,
+body[data-theme="dark"].is-admin .results-preview-admin summary::after {
+  color: var(--ui-text-soft) !important;
+}
+
+body[data-theme="dark"] .section-heading,
+body[data-theme="dark"] .layout-side .section-heading,
+body[data-theme="dark"] .layout-main .section-heading,
+body[data-theme="dark"] .module-board .section-heading {
+  background: transparent !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .winner-card.rank-1,
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-1 {
+  border-color: rgba(214, 167, 60, 0.72) !important;
+  background: linear-gradient(135deg, #312817 0%, #202020 62%, #3d3016 100%) !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .winner-card.rank-2,
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-2 {
+  border-color: rgba(185, 193, 204, 0.58) !important;
+  background: linear-gradient(135deg, #2a2d2f 0%, #202020 64%, #34383b 100%) !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .winner-card.rank-3,
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-3 {
+  border-color: rgba(200, 135, 69, 0.62) !important;
+  background: linear-gradient(135deg, #302118 0%, #202020 64%, #3c2618 100%) !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .winner-card.rank-1 strong,
+body[data-theme="dark"] .winner-card.rank-1 .winner-score span {
+  color: #f4d37a !important;
+}
+
+body[data-theme="dark"] .winner-card.rank-2 strong,
+body[data-theme="dark"] .winner-card.rank-2 .winner-score span {
+  color: #d7dde5 !important;
+}
+
+body[data-theme="dark"] .winner-card.rank-3 strong,
+body[data-theme="dark"] .winner-card.rank-3 .winner-score span {
+  color: #e7a36a !important;
+}
+
+body[data-theme="dark"] .winner-card.rank-1 .winner-score small,
+body[data-theme="dark"] .winner-card.rank-2 .winner-score small,
+body[data-theme="dark"] .winner-card.rank-3 .winner-score small,
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-1 .winner-score small {
+  color: var(--ui-text-soft) !important;
+}
+
+body[data-theme="dark"] .result-empty-state,
+body[data-theme="dark"] .result-more summary {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface-soft) !important;
+  color: var(--ui-text-soft) !important;
+}
+
+body[data-theme="dark"] .app-toast {
+  border-color: var(--ui-line-strong) !important;
+  background: #202020 !important;
+  color: var(--ui-text) !important;
+  box-shadow: 0 20px 52px rgba(0, 0, 0, 0.42) !important;
+}
+
+body[data-theme="dark"].is-admin .layout-side .admin-controls #statusToggle,
+body[data-theme="dark"].is-admin .layout-side .admin-controls #publishToggle,
+body[data-theme="dark"].is-admin .layout-side .admin-controls #downloadArchive,
+body[data-theme="dark"].is-admin .layout-side .admin-controls #clearCurrentPeriod,
+body[data-theme="dark"].is-admin .layout-side .admin-controls button,
+body[data-theme="dark"] .top-actions #voterLogout,
+body[data-theme="dark"] .top-actions #themeToggle {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface-soft) !important;
+  color: var(--ui-text) !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="dark"].is-admin .layout-side .admin-controls #statusToggle:not(:disabled):hover,
+body[data-theme="dark"].is-admin .layout-side .admin-controls #publishToggle:not(:disabled):hover,
+body[data-theme="dark"].is-admin .layout-side .admin-controls #downloadArchive:not(:disabled):hover,
+body[data-theme="dark"].is-admin .layout-side .admin-controls #clearCurrentPeriod:not(:disabled):hover,
+body[data-theme="dark"].is-admin .layout-side .admin-controls button:not(:disabled):hover,
+body[data-theme="dark"] .top-actions #voterLogout:not(:disabled):hover,
+body[data-theme="dark"] .top-actions #themeToggle:not(:disabled):hover {
+  border-color: var(--ui-line-strong) !important;
+  background: var(--ui-surface-hover) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-1 strong,
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-1 .winner-score span {
+  color: #f4d37a !important;
+}
+
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-2 strong,
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-2 .winner-score span {
+  color: #d7dde5 !important;
+}
+
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-3 strong,
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-3 .winner-score span {
+  color: #e7a36a !important;
+}
+
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-1 .winner-score small,
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-2 .winner-score small,
+body[data-theme="dark"] .admin-results-preview .winner-card.rank-3 .winner-score small {
+  color: var(--ui-text-soft) !important;
+}
+
+body[data-theme="dark"].is-admin .layout-main .module-board,
+body[data-theme="dark"]:not(.is-admin) .layout-main .module-board,
+body[data-theme="dark"].is-admin .layout-main .vote-toolbar,
+body[data-theme="dark"]:not(.is-admin) .layout-main .vote-toolbar,
+body[data-theme="dark"].is-admin .layout-main .welcome-panel,
+body[data-theme="dark"]:not(.is-admin) .layout-main .welcome-panel {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface) !important;
+  color: var(--ui-text) !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="dark"].is-admin .layout-main .module-board .section-heading,
+body[data-theme="dark"]:not(.is-admin) .layout-main .module-board .section-heading {
+  border-bottom-color: var(--ui-line) !important;
+  background: transparent !important;
+  color: var(--ui-text) !important;
+}
