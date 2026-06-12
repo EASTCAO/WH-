@@ -8055,6 +8055,16 @@ body[data-theme="dark"] .top-actions .theme-toggle-icon {
   transform: none;
 }
 
+.module-board .section-heading h2,
+.layout-side .module-board .section-heading h2,
+.layout-main .module-board .section-heading h2 {
+  font-size: 18px !important;
+  line-height: 1.15 !important;
+  font-weight: 900 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
 .admin-results-preview .winner-card.rank-1,
 body[data-theme="dark"] .admin-results-preview .winner-card.rank-1 {
   border-color: rgba(190, 139, 30, 0.58) !important;
