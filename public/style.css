@@ -7596,6 +7596,70 @@ body[data-theme="dark"] .layout-side .module-card:hover {
   background: var(--ui-surface-soft) !important;
 }
 
+body.is-admin .layout-side .admin-controls button {
+  border: 1px solid var(--ui-line) !important;
+  background: #ffffff !important;
+  color: var(--ui-text) !important;
+  box-shadow: none !important;
+}
+
+body.is-admin .layout-side .admin-controls button:not(:disabled):hover {
+  transform: translateY(-1px);
+  border-color: var(--ui-line-strong) !important;
+  background: #f4f4f0 !important;
+  color: var(--ui-text) !important;
+}
+
+body.is-admin .layout-side .admin-controls .status-toggle {
+  border-color: var(--ui-line-strong) !important;
+  background: #f4f4f0 !important;
+  color: var(--ui-text) !important;
+}
+
+body.is-admin .layout-side .admin-controls #publishToggle {
+  border-color: var(--ui-line) !important;
+  background: #ffffff !important;
+  color: var(--ui-text) !important;
+}
+
+body.is-admin .layout-side .admin-controls #downloadPoster,
+body.is-admin .layout-side .admin-controls #downloadArchive {
+  border-color: var(--ui-line) !important;
+  background: #ffffff !important;
+  color: var(--ui-text) !important;
+}
+
+body.is-admin .layout-side .admin-controls #clearCurrentPeriod {
+  border-color: rgba(180, 35, 24, 0.22) !important;
+  background: #fffafa !important;
+  color: #b42318 !important;
+}
+
+body[data-theme="dark"].is-admin .layout-side .admin-controls button {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface-soft) !important;
+  color: var(--ui-text) !important;
+}
+
+body.is-admin .layout-side .admin-controls #statusToggle,
+body.is-admin .layout-side .admin-controls #statusToggle.status-toggle {
+  border-color: var(--ui-line-strong) !important;
+  background: #f4f4f0 !important;
+  color: var(--ui-text) !important;
+}
+
+body.is-admin .layout-side .admin-controls button:disabled {
+  border-color: rgba(17, 17, 17, 0.14) !important;
+  background: #eeeeea !important;
+  color: #8d8d86 !important;
+}
+
+body[data-theme="dark"].is-admin .layout-side .admin-controls #statusToggle,
+body[data-theme="dark"].is-admin .layout-side .admin-controls #statusToggle.status-toggle {
+  background: var(--ui-surface-soft) !important;
+  color: var(--ui-text) !important;
+}
+
 body:not(.is-admin) .photographer-result-card {
   min-height: 56px !important;
   display: grid !important;
@@ -7633,5 +7697,51 @@ body:not(.is-admin) .photographer-result-card:hover {
 
 body[data-theme="dark"]:not(.is-admin) .photographer-result-card {
   background: var(--ui-surface) !important;
+  color: var(--ui-text) !important;
+}
+
+.layout-side .admin-controls button,
+.layout-side .admin-controls .status-toggle,
+.layout-side .admin-controls #statusToggle,
+.layout-side .admin-controls #publishToggle,
+.layout-side .admin-controls #downloadPoster,
+.layout-side .admin-controls #downloadArchive {
+  border: 1px solid var(--ui-line) !important;
+  background: #ffffff !important;
+  color: var(--ui-text) !important;
+  box-shadow: none !important;
+}
+
+.layout-side .admin-controls #statusToggle,
+.layout-side .admin-controls #statusToggle.status-toggle {
+  border-color: var(--ui-line-strong) !important;
+  background: #f4f4f0 !important;
+  color: var(--ui-text) !important;
+}
+
+.layout-side .admin-controls button:not(:disabled):hover {
+  transform: translateY(-1px);
+  border-color: var(--ui-line-strong) !important;
+  background: #f4f4f0 !important;
+  color: var(--ui-text) !important;
+}
+
+.layout-side .admin-controls button:disabled {
+  border-color: rgba(17, 17, 17, 0.14) !important;
+  background: #eeeeea !important;
+  color: #8d8d86 !important;
+}
+
+.layout-side .admin-controls #clearCurrentPeriod {
+  border-color: rgba(180, 35, 24, 0.22) !important;
+  background: #fffafa !important;
+  color: #b42318 !important;
+}
+
+body[data-theme="dark"] .layout-side .admin-controls button,
+body[data-theme="dark"] .layout-side .admin-controls .status-toggle,
+body[data-theme="dark"] .layout-side .admin-controls #statusToggle {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface-soft) !important;
   color: var(--ui-text) !important;
 }
