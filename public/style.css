@@ -8275,3 +8275,49 @@ body[data-theme="dark"].is-admin .layout-main .module-board .module-card.active 
   color: var(--ui-text) !important;
   box-shadow: inset 0 0 0 1px var(--ui-line-strong) !important;
 }
+
+/* Final dark-mode header identity cleanup. */
+body[data-theme="dark"] .top-actions .identity.is-logged-in {
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .top-actions .identity.is-logged-in .identity-status {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface-soft) !important;
+  color: var(--ui-text) !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="dark"] .top-actions .identity.is-logged-in .identity-login button,
+body[data-theme="dark"] .top-actions .identity.is-logged-in #voterLogout {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface-soft) !important;
+  color: var(--ui-text) !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="dark"] .top-actions .identity.is-logged-in .identity-login button:hover,
+body[data-theme="dark"] .top-actions .identity.is-logged-in #voterLogout:hover {
+  border-color: var(--ui-line-strong) !important;
+  background: #252523 !important;
+  color: #ffffff !important;
+}
+
+body[data-theme="dark"] #voterLoginStatus {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface-soft) !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] #voterLogout {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface-soft) !important;
+  color: var(--ui-text) !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="dark"] #voterLogout:hover {
+  border-color: var(--ui-line-strong) !important;
+  background: #252523 !important;
+  color: #ffffff !important;
+}
