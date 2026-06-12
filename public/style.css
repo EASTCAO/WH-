@@ -6855,19 +6855,19 @@ body.is-admin .layout-main .vote-toolbar {
 }
 
 body.is-admin .layout-main .gallery {
-  order: 4;
-}
-
-body.is-admin .layout-main .submit-zone {
   order: 5;
 }
 
-body.is-admin .layout-main .tiebreaker-panel {
+body.is-admin .layout-main .submit-zone {
   order: 6;
 }
 
-body.is-admin .layout-main .results-panel {
+body.is-admin .layout-main .tiebreaker-panel {
   order: 7;
+}
+
+body.is-admin .layout-main .results-panel {
+  order: 8;
 }
 
 body:not(.is-admin) .layout-main .workspace-status {
@@ -8847,4 +8847,30 @@ body[data-theme="dark"]:not(.is-admin) .layout-main .module-board .section-headi
   border-bottom-color: var(--ui-line) !important;
   background: transparent !important;
   color: var(--ui-text) !important;
+}
+
+/* Upload/transcode progress belongs with the artwork area. */
+.layout-main > .optimize-status {
+  order: 4;
+  margin: 0 !important;
+  border-radius: var(--ui-radius) !important;
+}
+
+body:not(.is-admin) .layout-main > .optimize-status {
+  display: none !important;
+}
+
+body.is-admin .layout-main > .optimize-status {
+  min-height: 42px;
+  padding: 10px 14px;
+}
+
+body[data-theme="dark"] .layout-main > .optimize-status {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface) !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .layout-main > .optimize-status span:last-child {
+  color: var(--ui-text-soft) !important;
 }
