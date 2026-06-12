@@ -6888,9 +6888,9 @@ body:not(.is-admin) .layout-main .workspace-status {
   grid-column: 2;
   grid-row: 1;
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(260px, 340px);
+  grid-template-columns: minmax(260px, 1fr);
   align-items: stretch;
-  gap: 12px;
+  gap: 0;
   min-height: 96px;
   padding: 14px 18px;
   border-bottom: 1px solid var(--ui-line) !important;
@@ -6941,8 +6941,7 @@ body:not(.is-admin) .layout-main .workspace-status #selectedCount {
 }
 
 body:not(.is-admin) .layout-main .workspace-status .welcome-panel {
-  grid-column: 2 !important;
-  min-width: 0;
+  display: none !important;
 }
 
 body:not(.is-admin) .layout-main .workspace-status .welcome-panel > div {
