@@ -359,6 +359,17 @@ function hmac(key, value, encoding) {
   return crypto.createHmac("sha256", key).update(value, "utf8").digest(encoding);
 }
 
+function uploadOwnerToken(file) {
+  const secret = ADMIN_CODE || "local-upload-owner";
+  return hmac(secret, [
+    normalizeName(file.entryId),
+    normalizeName(file.moduleName),
+    normalizeName(file.photographer),
+    normalizeName(file.uploadedBy),
+    normalizeName(file.objectKey)
+  ].join("|"), "hex").slice(0, 24);
+}
+
 function sha256Hex(value) {
   return crypto.createHash("sha256").update(value, "utf8").digest("hex");
 }
@@ -518,11 +529,37 @@ function resolveUploaderName(value, photographers) {
 }
 
 function knownPhotographerName(values, photographers) {
+  return knownPhotographerNames(values, photographers)[0] || "";
+}
+
+function knownPhotographerNames(values, photographers) {
   const list = Array.isArray(photographers) ? photographers.filter(Boolean) : [];
-  const exact = list.find(name => values.some(value => normalizeName(value) === name));
-  if (exact) return exact;
+  const normalizedValues = values.map(value => normalizeName(value)).filter(Boolean);
+  const exact = list.filter(name => normalizedValues.some(value => value === name));
+  if (exact.length) return exact;
   const text = values.map(value => normalizeName(value)).join(" ");
-  return list.find(name => text.includes(name)) || "";
+  return list
+    .map(name => ({ name, index: text.indexOf(name) }))
+    .filter(item => item.index >= 0)
+    .sort((a, b) => a.index - b.index || b.name.length - a.name.length)
+    .map(item => item.name);
+}
+
+function applyUploadOwner(info, uploaderName, knownPhotographer, photographers) {
+  const detectedNames = Array.isArray(knownPhotographer)
+    ? knownPhotographer.filter(Boolean)
+    : knownPhotographer ? [knownPhotographer] : [];
+  if (uploaderName) {
+    const otherName = detectedNames.find(name => name !== uploaderName);
+    if (otherName) {
+      throw new Error(`当前登录为「${uploaderName}」，但文件夹识别为「${otherName}」。摄影师端只能上传自己的作品，请登录「${otherName}」上传，或让管理员后台代传。`);
+    }
+    info.photographer = uploaderName;
+    return "photographer";
+  }
+  if (detectedNames[0]) info.photographer = detectedNames[0];
+  else if (!photographers.includes(info.photographer)) info.photographer = "未识别摄影师";
+  return "admin";
 }
 
 function parseFolderInfo(folderName) {
@@ -1203,6 +1240,10 @@ async function handleUpload(req, res) {
   const periodId = dbSnapshot.currentPeriodId;
   const photographers = dbSnapshot.photographers || [];
   const uploaderName = resolveUploaderName(fields.uploaderName, photographers);
+  const adminUpload = !uploaderName && isAdminPayload(fields);
+  if (!uploaderName && !adminUpload) {
+    throw new Error("请先登录摄影师姓名上传本人作品，或使用管理员后台代传。");
+  }
   const grouped = new Map();
 
   if (files.length > MAX_FILES_PER_UPLOAD) {
@@ -1216,10 +1257,8 @@ async function handleUpload(req, res) {
     if (isExcludedUploadPath(relativePath)) continue;
 
     const info = parseUploadPath(relativePath, fallbackModuleName);
-    const knownPhotographer = knownPhotographerName([info.photographer, info.workFolder, info.sku, info.title, relativePath], photographers);
-    if (uploaderName) info.photographer = uploaderName;
-    else if (knownPhotographer) info.photographer = knownPhotographer;
-    else if (!photographers.includes(info.photographer)) info.photographer = "未识别摄影师";
+    const knownPhotographer = knownPhotographerNames([info.photographer, info.workFolder, info.sku, info.title, relativePath], photographers);
+    const uploadedBy = applyUploadOwner(info, uploaderName, knownPhotographer, photographers);
     const expectedKind = MODULE_BY_NAME.get(info.moduleName)?.kind;
     const mediaKind = IMAGE_TYPES.has(ext) ? "image" : VIDEO_TYPES.has(ext) ? "video" : "file";
     if (!MODULE_BY_NAME.has(info.moduleName)) continue;
@@ -1230,7 +1269,7 @@ async function handleUpload(req, res) {
       : hash(`${periodId}|${info.moduleName}|${info.photographer}|${info.sku}|${info.title}`);
     if (uploaderName) assertUploaderCanCreateModuleEntry(dbSnapshot, uploaderName, info.moduleName, entryId);
     const key = `${periodId}|${info.moduleName}|${info.photographer}|${entryId}`;
-    if (!grouped.has(key)) grouped.set(key, { ...info, files: [] });
+    if (!grouped.has(key)) grouped.set(key, { ...info, uploadedBy, files: [] });
     grouped.get(key).files.push({ ...file, relativePath, ext, mediaKind });
   }
 
@@ -1295,6 +1334,10 @@ async function handleStorageSign(req, res) {
   const periodId = dbSnapshot.currentPeriodId;
   const photographers = dbSnapshot.photographers || [];
   const uploaderName = resolveUploaderName(payload.uploaderName, photographers);
+  const adminUpload = !uploaderName && isAdminPayload(payload);
+  if (!uploaderName && !adminUpload) {
+    throw new Error("请先登录摄影师姓名上传本人作品，或使用管理员后台代传。");
+  }
   const uploadNonce = crypto.randomBytes(6).toString("hex");
   const signed = [];
 
@@ -1305,8 +1348,14 @@ async function handleStorageSign(req, res) {
   for (const [index, file] of files.entries()) {
     const normalized = normalizeUploadFile(file, fallbackModuleName, photographers, periodId, false);
     if (!normalized) continue;
+    const knownPhotographer = knownPhotographerNames([normalized.photographer, normalized.workFolder, normalized.sku, normalized.title, normalized.relativePath], photographers);
+    let uploadedBy = "admin";
     if (uploaderName) {
-      normalized.photographer = uploaderName;
+      uploadedBy = applyUploadOwner(normalized, uploaderName, knownPhotographer, photographers);
+    } else {
+      uploadedBy = applyUploadOwner(normalized, "", knownPhotographer, photographers);
+    }
+    if (uploadedBy === "photographer") {
       normalized.entryId = uploadSessionId
         ? hash(`${periodId}|${normalized.moduleName}|${normalized.photographer}|${uploadSessionId}`)
         : hash(`${periodId}|${normalized.moduleName}|${normalized.photographer}|${normalized.sku}|${normalized.title}`);
@@ -1317,7 +1366,7 @@ async function handleStorageSign(req, res) {
     const objectKey = createStorageObjectKey(periodId, normalized.entryId, filename);
     const publicUrl = publicStorageUrl(objectKey);
     const signedUrl = createPresignedPutUrl(objectKey, normalizeName(file.type) || contentTypeFor(filename));
-    signed.push({
+    const signedFile = {
       id: hash(`${normalized.entryId}|${objectKey}`),
       uploadUrl: signedUrl.url,
       method: "PUT",
@@ -1334,8 +1383,11 @@ async function handleStorageSign(req, res) {
       title: normalized.title,
       relativePath: normalized.relativePath,
       kind: normalized.mediaKind,
+      uploadedBy,
       name: file.name || path.basename(normalized.relativePath)
-    });
+    };
+    signedFile.ownerToken = uploadOwnerToken(signedFile);
+    signed.push(signedFile);
   }
 
   sendJson(res, 200, { ok: true, storage: "s3", files: signed });
@@ -1352,8 +1404,11 @@ async function handleStorageComplete(req, res) {
 
   for (const file of uploaded) {
     if (!file.entryId || !file.publicUrl || !file.moduleName) continue;
+    if (file.ownerToken !== uploadOwnerToken(file)) {
+      throw new Error("上传归属校验失败，请重新上传");
+    }
     const ownerModuleKey = `${file.photographer}|${file.moduleName}`;
-    if (file.photographer && file.moduleName && !seenUploaderModules.has(ownerModuleKey)) {
+    if (file.uploadedBy === "photographer" && file.photographer && file.moduleName && !seenUploaderModules.has(ownerModuleKey)) {
       assertUploaderCanCreateModuleEntry(dbSnapshot, file.photographer, file.moduleName, file.entryId);
       seenUploaderModules.add(ownerModuleKey);
     }

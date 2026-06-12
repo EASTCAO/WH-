@@ -239,8 +239,10 @@ function entryTitle(entry) {
     .sort((a, b) => a.sequence - b.sequence)
     .findIndex(item => item.id === entry.id);
   const displaySequence = String(moduleIndex + 1).padStart(2, "0");
-  if (entry.sku) return `${displaySequence} · ${cleanSku(entry.sku)}`;
-  return displaySequence;
+  const skuText = entry.sku ? cleanSku(entry.sku) : "";
+  const baseTitle = skuText ? `${displaySequence} · ${skuText}` : displaySequence;
+  if (adminMode) return `${baseTitle} · ${entry.photographer || "未识别摄影师"}`;
+  return baseTitle;
 }
 
 function cleanSku(value) {
@@ -1077,7 +1079,9 @@ function renderGallery() {
   if (!list.length) {
     const canUpload = adminMode || Boolean(voter);
     const uploadHint = canUpload
-      ? `把文件夹、图片或视频拖到这里，上传到 ${activeModule.name}`
+      ? (adminMode
+        ? `管理员代传：把带摄影师姓名的文件夹拖到这里，上传到 ${activeModule.name}`
+        : `把自己的作品拖到这里，上传到 ${activeModule.name}`)
       : "请先登录自己的姓名后再上传作品";
     const message = `${currentPeriodName || "当前月份"} 的 ${activeModule.name} 暂无作品`;
     gallery.innerHTML = `
@@ -1506,6 +1510,22 @@ function chunkArray(items, size) {
   return chunks;
 }
 
+function detectedUploadPhotographers(files) {
+  const knownNames = Array.isArray(photographers) ? photographers.filter(Boolean) : [];
+  if (!knownNames.length) return [];
+  const found = new Map();
+  for (const file of files) {
+    const relativePath = String(file.relativePath || file.webkitRelativePath || file.name || "");
+    for (const name of knownNames) {
+      const index = relativePath.indexOf(name);
+      if (index >= 0 && (!found.has(name) || index < found.get(name))) found.set(name, index);
+    }
+  }
+  return [...found.entries()]
+    .sort((a, b) => a[1] - b[1] || b[0].length - a[0].length)
+    .map(([name]) => name);
+}
+
 function fileEntryToFile(entry, pathPrefix) {
   return new Promise((resolve, reject) => {
     entry.file(file => {
@@ -1595,6 +1615,16 @@ async function uploadFiles(files, moduleName) {
     setStatus("文件夹里没有可识别的图片或视频");
     return;
   }
+  if (!adminMode) {
+    const ownerNames = detectedUploadPhotographers(mediaFiles);
+    const currentName = voterName();
+    const otherName = ownerNames.find(name => name !== currentName);
+    if (otherName) {
+      setStatus(`当前登录为 ${currentName}，但文件夹识别为 ${otherName}。摄影师只能上传自己的作品，请切换姓名或让管理员后台代传。`);
+      showToast("摄影师只能上传自己的作品", "error");
+      return;
+    }
+  }
   const batches = chunkArray(mediaFiles, UPLOAD_BATCH_SIZE);
   let uploadedFiles = 0;
   let totalMedia = 0;
@@ -1611,9 +1641,9 @@ async function uploadFiles(files, moduleName) {
       totalMedia += result.media || 0;
       setStatus(`正在上传到 ${moduleName}：已完成 ${uploadedFiles}/${mediaFiles.length} 个文件，继续处理...`);
     }
-    const uploadOwner = adminMode ? "管理员" : voterName();
+    const uploadOwner = adminMode ? "文件夹识别到的摄影师" : voterName();
     setStatus(`${moduleName} 上传完成：已处理 ${totalMedia} 个媒体文件，作品列表已刷新。`);
-    showToast(`${moduleName} 上传成功，已记录为 ${uploadOwner} 的作品`, "success");
+    showToast(`${moduleName} 上传成功，已记录为${uploadOwner}的作品`, "success");
     await loadData();
   } catch (error) {
     setStatus(error.message);
@@ -1625,6 +1655,7 @@ async function uploadBatchToServer(batch, moduleName, batchNo, batchCount, uploa
   formData.append("moduleName", moduleName);
   formData.append("uploadSessionId", uploadSessionId);
   if (!adminMode) formData.append("uploaderName", voterName());
+  if (adminMode) formData.append("adminCode", adminCode.value.trim());
   batch.forEach(file => {
     const relativePath = file.relativePath || file.webkitRelativePath || file.name;
     formData.append("files", file, relativePath);
@@ -1655,7 +1686,13 @@ async function uploadBatchToObjectStorage(batch, moduleName, batchNo, batchCount
   const signed = await fetchJson("/api/storage/sign", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ moduleName, files, uploadSessionId, uploaderName: adminMode ? "" : voterName() })
+    body: JSON.stringify({
+      moduleName,
+      files,
+      uploadSessionId,
+      uploaderName: adminMode ? "" : voterName(),
+      adminCode: adminMode ? adminCode.value.trim() : ""
+    })
   });
   const signedFiles = Array.isArray(signed.files) ? signed.files : [];
   const uploaded = [];
