@@ -1485,7 +1485,7 @@ function toggleEntry(entry) {
     voterInput.focus();
     return;
   }
-  if (entry.photographer && entry.photographer === voter) {
+  if (entry.isOwn || (entry.photographer && entry.photographer === voter)) {
     alert("不能投自己的作品");
     return;
   }

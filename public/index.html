@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>作品评优投票</title>
-    <link rel="stylesheet" href="/style.css?v=20260613-progress-right">
+    <link rel="stylesheet" href="/style.css?v=20260613-vote-result-fix">
   </head>
   <body class="auth-locked">
     <section id="authScreen" class="auth-screen">
@@ -106,6 +106,7 @@
           </div>
         </section>
       </div>
+      <div id="uploadStatus" class="status upload-status-main"></div>
 
       <section class="module-board" aria-label="评优模块">
         <div class="section-heading">
@@ -117,7 +118,6 @@
           <span>评优结果</span>
           <strong>查看最终排名</strong>
         </button>
-        <div id="uploadStatus" class="status"></div>
       </section>
 
       <div id="optimizeStatus" class="optimize-status" hidden></div>
@@ -235,6 +235,6 @@
     </dialog>
 
     <div id="appToast" class="app-toast" hidden></div>
-    <script src="/app.js?v=20260613-upload-owner-preview"></script>
+    <script src="/app.js?v=20260613-vote-result-fix"></script>
   </body>
 </html>

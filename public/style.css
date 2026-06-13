@@ -8874,3 +8874,93 @@ body[data-theme="dark"] .layout-main > .optimize-status {
 body[data-theme="dark"] .layout-main > .optimize-status span:last-child {
   color: var(--ui-text-soft) !important;
 }
+
+/* Targeted fixes: lighter login, right-side upload status, and own-entry voting guard. */
+.auth-card button#authLogin {
+  border-color: #4b5563 !important;
+  background: #4b5563 !important;
+  color: #ffffff !important;
+}
+
+.auth-card button#authLogin:not(:disabled):hover {
+  border-color: #111827 !important;
+  background: #ffffff !important;
+  color: #111827 !important;
+}
+
+body[data-theme="dark"] .auth-card button#authLogin {
+  border-color: #d4d4d4 !important;
+  background: #d4d4d4 !important;
+  color: #111111 !important;
+}
+
+body[data-theme="dark"] .auth-card button#authLogin:not(:disabled):hover {
+  border-color: #f5f5f5 !important;
+  background: #242424 !important;
+  color: #f5f5f5 !important;
+}
+
+.layout-main > .upload-status-main {
+  min-height: 44px;
+  margin: 0 !important;
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--ui-line) !important;
+  border-radius: var(--ui-radius) !important;
+  background: #ffffff !important;
+  color: var(--ui-text-soft) !important;
+  box-shadow: none !important;
+}
+
+body:not(.is-admin) .layout-main > .upload-status-main {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+body.is-admin .layout-main > .upload-status-main {
+  order: 4;
+}
+
+.layout-main > .upload-status-main:empty {
+  display: none;
+}
+
+body[data-theme="dark"] .layout-main > .upload-status-main {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface) !important;
+  color: var(--ui-text-soft) !important;
+}
+
+body:not(.is-admin) .photographer-result-card {
+  display: grid;
+}
+
+body:not(.is-admin) .photographer-result-card[hidden] {
+  display: none !important;
+}
+
+.entry-card.disabled {
+  cursor: pointer;
+  opacity: 0.74;
+}
+
+.entry-card.disabled .vote-check,
+.entry-card.disabled .vote-check:disabled {
+  border-color: #d0d5dd !important;
+  background: #f2f4f7 !important;
+  color: #98a2b3 !important;
+  cursor: not-allowed;
+}
+
+.entry-card.disabled .entry-hint::after {
+  content: " · 自己作品不可投";
+  color: #98a2b3;
+}
+
+body[data-theme="dark"] .entry-card.disabled .vote-check,
+body[data-theme="dark"] .entry-card.disabled .vote-check:disabled {
+  border-color: var(--ui-line) !important;
+  background: #171717 !important;
+  color: var(--ui-text-soft) !important;
+}
