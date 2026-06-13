@@ -489,6 +489,61 @@ function parseSkuAndTitle(folderName) {
   };
 }
 
+function skuCandidatesFromText(value) {
+  const text = normalizeName(value);
+  const matches = text.match(/[A-Za-z][A-Za-z0-9_]{1,40}\d[A-Za-z0-9_]*/g) || [];
+  return matches
+    .map(item => item.replace(/^[_-]+|[_-]+$/g, ""))
+    .filter(Boolean);
+}
+
+function bestSkuCandidate(values, photographers = []) {
+  const photographerSet = new Set((photographers || []).map(normalizeName).filter(Boolean));
+  const moduleSet = new Set(MODULES.map(module => module.name));
+  const candidates = [];
+
+  for (const value of values) {
+    const normalized = normalizeName(value);
+    if (!normalized || photographerSet.has(normalized) || moduleSet.has(normalized)) continue;
+    for (const candidate of skuCandidatesFromText(normalized)) {
+      if (photographerSet.has(candidate) || moduleSet.has(candidate)) continue;
+      candidates.push(candidate);
+    }
+  }
+
+  if (!candidates.length) return "";
+  return candidates
+    .sort((a, b) => {
+      const meaningfulA = a.length >= 4 ? 1 : 0;
+      const meaningfulB = b.length >= 4 ? 1 : 0;
+      return meaningfulB - meaningfulA || b.length - a.length;
+    })[0];
+}
+
+function refineUploadSku(info, relativePath, photographers = []) {
+  const parts = normalizeName(relativePath).split(/[\\/]+/).filter(Boolean);
+  const names = [
+    info.sku,
+    info.title,
+    info.workFolder,
+    ...parts.map(part => path.basename(part, path.extname(part)))
+  ];
+  const sku = bestSkuCandidate(names, photographers);
+  if (!sku || sku === info.sku) return info;
+  info.sku = sku;
+  info.title = sku;
+  return info;
+}
+
+function displaySkuForEntry(entry) {
+  const media = entry.media || (entry.images || []).map(src => ({ src, kind: "image" }));
+  return bestSkuCandidate([
+    entry.sku,
+    entry.title,
+    ...(media || []).map(item => item.name || item.originalFilename || item.src || "")
+  ]) || entry.sku;
+}
+
 function isExcludedUploadPath(relativePath) {
   return relativePath
     .split(/[\\/]+/)
@@ -505,7 +560,7 @@ function normalizeUploadFile(file, fallbackModuleName, photographers, periodId, 
   if (!MEDIA_TYPES.has(ext) || (requireData && !file.data && !file.buffer)) return null;
   if (isExcludedUploadPath(relativePath)) return null;
 
-  const info = parseUploadPath(relativePath, fallbackModuleName);
+  const info = refineUploadSku(parseUploadPath(relativePath, fallbackModuleName), relativePath, photographers);
   const knownPhotographer = knownPhotographerName([info.photographer, info.workFolder, info.sku, info.title, relativePath], photographers);
   if (knownPhotographer) info.photographer = knownPhotographer;
   if (!knownPhotographer && !photographers.includes(info.photographer)) info.photographer = "鏈瘑鍒憚褰卞笀";
@@ -655,13 +710,14 @@ function parseUploadPath(relativePath, fallbackModuleName) {
 
 function publicEntry(entry) {
   const media = entry.media || (entry.images || []).map(src => ({ src, kind: "image" }));
+  const displaySku = displaySkuForEntry(entry);
   return {
     id: entry.id,
     moduleId: entry.moduleId || entry.board,
     moduleName: entry.moduleName || entry.board,
     moduleKind: entry.moduleKind || "image",
     photographer: entry.photographer,
-    sku: entry.sku,
+    sku: displaySku,
     title: entry.title,
     sequence: entry.sequence || 0,
     mediaCount: media.length,
@@ -683,12 +739,13 @@ function voterMedia(entry) {
 
 function voterEntry(entry, viewerName = "") {
   const media = voterMedia(entry);
+  const displaySku = displaySkuForEntry(entry);
   return {
     id: entry.id,
     moduleId: entry.moduleId || entry.board,
     moduleName: entry.moduleName || entry.board,
     moduleKind: entry.moduleKind || "image",
-    sku: entry.sku,
+    sku: displaySku,
     isOwn: Boolean(viewerName && entry.photographer === viewerName),
     sequence: entry.sequence || 0,
     mediaCount: media.length,
@@ -1296,7 +1353,7 @@ async function handleUpload(req, res) {
     if (!MEDIA_TYPES.has(ext) || (!file.data && !file.buffer)) continue;
     if (isExcludedUploadPath(relativePath)) continue;
 
-    const info = parseUploadPath(relativePath, fallbackModuleName);
+    const info = refineUploadSku(parseUploadPath(relativePath, fallbackModuleName), relativePath, photographers);
     const knownPhotographer = knownPhotographerNames([info.photographer, info.workFolder, info.sku, info.title, relativePath], photographers);
     const uploadedBy = applyUploadOwner(info, uploaderName, knownPhotographer, photographers);
     const expectedKind = MODULE_BY_NAME.get(info.moduleName)?.kind;
