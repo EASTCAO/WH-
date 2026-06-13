@@ -8964,3 +8964,48 @@ body[data-theme="dark"] .entry-card.disabled .vote-check:disabled {
   background: #171717 !important;
   color: var(--ui-text-soft) !important;
 }
+
+/* Keep photographer name and logout as one consistent header control group. */
+.top-actions .identity.is-logged-in {
+  gap: 8px !important;
+}
+
+.top-actions .identity.is-logged-in .identity-status {
+  order: 1 !important;
+}
+
+.top-actions .identity.is-logged-in .identity-login {
+  order: 2 !important;
+}
+
+.top-actions .identity.is-logged-in .identity-status,
+.top-actions .identity.is-logged-in #voterLogout {
+  min-width: 58px !important;
+  height: 40px !important;
+  padding: 0 14px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid var(--ui-line) !important;
+  border-radius: 999px !important;
+  background: #ffffff !important;
+  color: var(--ui-text) !important;
+  box-shadow: none !important;
+  font-size: 14px !important;
+  font-weight: 760 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+.top-actions .identity.is-logged-in #voterLogout:hover {
+  border-color: var(--ui-line-strong) !important;
+  background: var(--ui-surface-soft) !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="dark"] .top-actions .identity.is-logged-in .identity-status,
+body[data-theme="dark"] .top-actions .identity.is-logged-in #voterLogout {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface-soft) !important;
+  color: var(--ui-text) !important;
+}
