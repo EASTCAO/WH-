@@ -9010,6 +9010,33 @@ body[data-theme="dark"] .top-actions .identity.is-logged-in #voterLogout {
   color: var(--ui-text) !important;
 }
 
+/* Keep name, logout, and theme toggle together as one aligned control cluster. */
+.top-actions {
+  justify-content: flex-end !important;
+}
+
+.top-actions .identity.is-logged-in {
+  flex: 0 0 auto !important;
+}
+
+.top-actions .identity.is-logged-in,
+.top-actions .identity.is-logged-in .identity-login {
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.top-actions .identity.is-logged-in .identity-status {
+  order: 1 !important;
+}
+
+.top-actions .identity.is-logged-in .identity-login {
+  order: 2 !important;
+}
+
+.top-actions #themeToggle {
+  order: 3 !important;
+}
+
 /* Mobile-only clarity pass. PC layout is intentionally untouched. */
 @media (max-width: 640px) {
   body {
@@ -9021,8 +9048,9 @@ body[data-theme="dark"] .top-actions .identity.is-logged-in #voterLogout {
     display: grid !important;
     grid-template-columns: 1fr !important;
     gap: 12px !important;
-    padding: 18px 14px 14px !important;
+    padding: 18px 14px 18px !important;
     align-items: stretch !important;
+    min-height: 112px !important;
   }
 
   .topbar h1 {
@@ -9035,14 +9063,14 @@ body[data-theme="dark"] .top-actions .identity.is-logged-in #voterLogout {
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
-    justify-content: space-between !important;
+    justify-content: flex-end !important;
     gap: 8px !important;
   }
 
   .top-actions .identity.is-logged-in {
-    flex: 1 1 auto !important;
+    flex: 0 0 auto !important;
     min-width: 0 !important;
-    justify-content: flex-start !important;
+    justify-content: flex-end !important;
   }
 
   .top-actions .identity.is-logged-in .identity-status,
