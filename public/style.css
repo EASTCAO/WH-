@@ -9249,3 +9249,51 @@ body[data-theme="dark"] .top-actions .identity.is-logged-in #voterLogout {
     max-width: calc(100vw - 16px) !important;
   }
 }
+
+/* Mobile refinement: use a tidy two-column module board instead of clipped horizontal cards. */
+@media (max-width: 640px) {
+  body:not(.is-admin) .layout-main .module-board {
+    padding: 14px !important;
+  }
+
+  body:not(.is-admin) .layout-main .module-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-auto-flow: row !important;
+    grid-auto-columns: auto !important;
+    gap: 8px !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    scroll-snap-type: none !important;
+  }
+
+  body:not(.is-admin) .layout-main .module-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 62px !important;
+    padding: 10px 9px !important;
+    grid-template-columns: 24px minmax(0, 1fr) !important;
+    align-items: center !important;
+  }
+
+  body:not(.is-admin) .layout-main .module-heading {
+    gap: 2px !important;
+  }
+
+  body:not(.is-admin) .layout-main .module-name {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    font-size: 13px !important;
+    line-height: 1.2 !important;
+  }
+
+  body:not(.is-admin) .layout-main .module-status {
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+  }
+
+  body:not(.is-admin) .layout-main .gallery {
+    padding-top: 12px !important;
+  }
+}
