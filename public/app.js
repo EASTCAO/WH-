@@ -1996,6 +1996,7 @@ async function compressVideoForUpload(file, onProgress = () => {}) {
   const url = URL.createObjectURL(file);
   const video = document.createElement("video");
   video.src = url;
+  video.muted = true;
   video.playsInline = true;
   video.preload = "auto";
 
@@ -2010,12 +2011,10 @@ async function compressVideoForUpload(file, onProgress = () => {}) {
     const context = canvas.getContext("2d", { alpha: false });
     const canvasStream = canvas.captureStream(Math.min(CLIENT_VIDEO_FPS, 30));
     const sourceStream = video.captureStream?.();
-    sourceStream?.getAudioTracks?.().forEach(track => canvasStream.addTrack(track));
     const chunks = [];
     const recorder = new MediaRecorder(canvasStream, {
       mimeType,
-      videoBitsPerSecond: CLIENT_VIDEO_BITRATE,
-      audioBitsPerSecond: CLIENT_VIDEO_AUDIO_BITRATE
+      videoBitsPerSecond: CLIENT_VIDEO_BITRATE
     });
     recorder.ondataavailable = event => {
       if (event.data?.size) chunks.push(event.data);
@@ -2030,7 +2029,6 @@ async function compressVideoForUpload(file, onProgress = () => {}) {
     try {
       await video.play();
     } catch {
-      video.muted = true;
       await video.play();
     }
 
