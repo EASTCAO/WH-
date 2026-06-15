@@ -1368,7 +1368,7 @@ async function handleUpload(req, res) {
     if (!MODULE_BY_NAME.has(info.moduleName)) continue;
     if (expectedKind && expectedKind !== mediaKind) continue;
 
-    const entryId = uploadSessionId && uploaderName
+    const entryId = uploadSessionId
       ? hash(`${periodId}|${info.moduleName}|${info.photographer}|${uploadSessionId}`)
       : hash(`${periodId}|${info.moduleName}|${info.photographer}|${info.sku}|${info.title}`);
     if (uploaderName) assertUploaderCanCreateModuleEntry(dbSnapshot, uploaderName, info.moduleName, entryId);
@@ -1383,7 +1383,7 @@ async function handleUpload(req, res) {
   const optimizeJobs = [];
 
   for (const group of grouped.values()) {
-    const id = uploadSessionId && uploaderName
+    const id = uploadSessionId
       ? hash(`${periodId}|${group.moduleName}|${group.photographer}|${uploadSessionId}`)
       : hash(`${periodId}|${group.moduleName}|${group.photographer}|${group.sku}|${group.title}`);
     const entryDir = path.join(UPLOAD_DIR, id);
@@ -1471,11 +1471,9 @@ async function handleStorageSign(req, res) {
     } else {
       uploadedBy = applyUploadOwner(normalized, "", knownPhotographer, photographers);
     }
-    if (uploadedBy === "photographer") {
-      normalized.entryId = uploadSessionId
-        ? hash(`${periodId}|${normalized.moduleName}|${normalized.photographer}|${uploadSessionId}`)
-        : hash(`${periodId}|${normalized.moduleName}|${normalized.photographer}|${normalized.sku}|${normalized.title}`);
-    }
+    normalized.entryId = uploadSessionId
+      ? hash(`${periodId}|${normalized.moduleName}|${normalized.photographer}|${uploadSessionId}`)
+      : hash(`${periodId}|${normalized.moduleName}|${normalized.photographer}|${normalized.sku}|${normalized.title}`);
     if (uploaderName) assertUploaderCanCreateModuleEntry(dbSnapshot, uploaderName, normalized.moduleName, normalized.entryId);
     const serial = String(index + 1).padStart(3, "0");
     const filename = `${safeSegment(normalized.sku)}_${uploadNonce}_${serial}${normalized.ext}`;
@@ -1528,7 +1526,7 @@ async function handleStorageComplete(req, res) {
       assertUploaderCanCreateModuleEntry(dbSnapshot, file.photographer, file.moduleName, file.entryId);
       seenUploaderModules.add(ownerModuleKey);
     }
-    const key = `${file.periodId}|${file.moduleName}|${file.photographer}|${file.sku}|${file.title}`;
+    const key = `${file.periodId}|${file.moduleName}|${file.photographer}|${file.entryId}`;
     if (!grouped.has(key)) {
       grouped.set(key, {
         id: file.entryId,
