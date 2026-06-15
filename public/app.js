@@ -45,6 +45,12 @@ const CLIENT_IMAGE_OPTIMIZE_MIN_BYTES = 1.5 * 1024 * 1024;
 const CLIENT_IMAGE_MAX_DIMENSION = 2400;
 const CLIENT_IMAGE_QUALITY = 0.86;
 const CLIENT_OPTIMIZABLE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const CLIENT_VIDEO_OPTIMIZE_MIN_BYTES = 5 * 1024 * 1024;
+const CLIENT_VIDEO_MAX_WIDTH = 1920;
+const CLIENT_VIDEO_MAX_HEIGHT = 1080;
+const CLIENT_VIDEO_BITRATE = 1800 * 1000;
+const CLIENT_VIDEO_AUDIO_BITRATE = 128 * 1000;
+const CLIENT_VIDEO_FPS = 30;
 let uploadQueue = Promise.resolve();
 let uploadQueueLength = 0;
 let uploadProgressStartedAt = 0;
@@ -1760,17 +1766,18 @@ async function previewUploadOwner(mediaFiles, moduleName) {
 }
 
 async function uploadBatchToServer(batch, moduleName, batchNo, batchCount, uploadSessionId) {
+  const uploadBatch = await prepareUploadBatchForTransfer(batch, moduleName, batchNo, batchCount);
   const formData = new FormData();
   formData.append("moduleName", moduleName);
   formData.append("uploadSessionId", uploadSessionId);
   if (!adminMode) formData.append("uploaderName", voterName());
   if (adminMode) formData.append("adminCode", adminCode.value.trim());
-  batch.forEach(file => {
+  uploadBatch.forEach(file => {
     const relativePath = file.relativePath || file.webkitRelativePath || file.name;
     formData.append("files", file, relativePath);
   });
   setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batchCount} 批正在上传并生成展示版...`);
-  const totalBytes = batch.reduce((sum, file) => sum + (file.size || 0), 0);
+  const totalBytes = uploadBatch.reduce((sum, file) => sum + (file.size || 0), 0);
   uploadProgressStartedAt = Date.now();
   setUploadProgress(
     `正在上传到 ${moduleName}`,
@@ -1789,12 +1796,11 @@ async function uploadBatchToServer(batch, moduleName, batchNo, batchCount, uploa
 }
 
 async function uploadBatchToObjectStorage(batch, moduleName, batchNo, batchCount, uploadSessionId) {
-  setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batchCount} 批压缩图片...`);
-  const uploadBatch = await Promise.all(batch.map(prepareDirectUploadFile));
+  const uploadBatch = await prepareUploadBatchForTransfer(batch, moduleName, batchNo, batchCount);
   const compressedCount = uploadBatch.filter(file => file.optimizedForUpload).length;
   const savedBytes = uploadBatch.reduce((sum, file) => sum + (file.uploadSavedBytes || 0), 0);
   if (compressedCount) {
-    setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batchCount} 批已压缩 ${compressedCount} 张，减少 ${formatFileSize(savedBytes)}...`);
+    setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batchCount} 批已压缩 ${compressedCount} 个文件，减少 ${formatFileSize(savedBytes)}...`);
   }
 
   const files = uploadBatch.map(file => ({
@@ -1902,9 +1908,43 @@ function uploadFormDataWithProgress(url, formData, onProgress) {
   });
 }
 
+async function prepareUploadBatchForTransfer(batch, moduleName, batchNo, batchCount) {
+  const prepared = [];
+  for (const [index, file] of batch.entries()) {
+    setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batchCount} 批准备文件 ${index + 1}/${batch.length}...`);
+    const nextFile = await prepareDirectUploadFile(file, progress => {
+      setStatus(`正在压缩视频：${file.name} · ${progress}%`);
+    });
+    prepared.push(nextFile);
+  }
+  return prepared;
+}
+
 async function prepareDirectUploadFile(file) {
   const relativePath = file.relativePath || file.webkitRelativePath || file.name;
   file.relativePath = relativePath;
+  if (shouldOptimizeUploadVideo(file)) {
+    try {
+      const compressed = await compressVideoForUpload(file, progress => {
+        setStatus(`正在压缩视频：${file.name} · ${progress}%`);
+      });
+      if (!compressed || compressed.size >= file.size) return file;
+      const extension = extensionForVideoMime(compressed.type);
+      const optimizedName = file.name.replace(/\.[^.]+$/, extension);
+      const optimizedRelativePath = relativePath.replace(/\.[^.]+$/, extension);
+      const optimizedFile = new File([compressed], optimizedName, {
+        type: compressed.type,
+        lastModified: file.lastModified
+      });
+      optimizedFile.relativePath = optimizedRelativePath;
+      optimizedFile.uploadSavedBytes = file.size - optimizedFile.size;
+      optimizedFile.optimizedForUpload = true;
+      return optimizedFile;
+    } catch {
+      return file;
+    }
+  }
+
   if (!shouldOptimizeUploadImage(file)) return file;
 
   try {
@@ -1927,6 +1967,111 @@ async function prepareDirectUploadFile(file) {
 
 function shouldOptimizeUploadImage(file) {
   return file.size >= CLIENT_IMAGE_OPTIMIZE_MIN_BYTES && CLIENT_OPTIMIZABLE_IMAGE_TYPES.has(file.type);
+}
+
+function shouldOptimizeUploadVideo(file) {
+  if (file.size < CLIENT_VIDEO_OPTIMIZE_MIN_BYTES) return false;
+  if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) return false;
+  return file.type.startsWith("video/") || /\.(mp4|mov|m4v|webm)$/i.test(file.name);
+}
+
+function preferredVideoMimeType() {
+  const candidates = [
+    "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+    "video/webm;codecs=vp9,opus",
+    "video/webm;codecs=vp8,opus",
+    "video/webm"
+  ];
+  return candidates.find(type => MediaRecorder.isTypeSupported(type)) || "";
+}
+
+function extensionForVideoMime(mimeType) {
+  return mimeType.includes("mp4") ? ".mp4" : ".webm";
+}
+
+async function compressVideoForUpload(file, onProgress = () => {}) {
+  const mimeType = preferredVideoMimeType();
+  if (!mimeType) return null;
+
+  const url = URL.createObjectURL(file);
+  const video = document.createElement("video");
+  video.src = url;
+  video.playsInline = true;
+  video.preload = "auto";
+
+  try {
+    await waitForVideoMetadata(video);
+    const scale = Math.min(1, CLIENT_VIDEO_MAX_WIDTH / video.videoWidth, CLIENT_VIDEO_MAX_HEIGHT / video.videoHeight);
+    const width = Math.max(2, Math.round((video.videoWidth * scale) / 2) * 2);
+    const height = Math.max(2, Math.round((video.videoHeight * scale) / 2) * 2);
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d", { alpha: false });
+    const canvasStream = canvas.captureStream(Math.min(CLIENT_VIDEO_FPS, 30));
+    const sourceStream = video.captureStream?.();
+    sourceStream?.getAudioTracks?.().forEach(track => canvasStream.addTrack(track));
+    const chunks = [];
+    const recorder = new MediaRecorder(canvasStream, {
+      mimeType,
+      videoBitsPerSecond: CLIENT_VIDEO_BITRATE,
+      audioBitsPerSecond: CLIENT_VIDEO_AUDIO_BITRATE
+    });
+    recorder.ondataavailable = event => {
+      if (event.data?.size) chunks.push(event.data);
+    };
+
+    const stopped = new Promise((resolve, reject) => {
+      recorder.onstop = resolve;
+      recorder.onerror = () => reject(new Error("视频压缩失败"));
+    });
+
+    recorder.start(1000);
+    try {
+      await video.play();
+    } catch {
+      video.muted = true;
+      await video.play();
+    }
+
+    await drawVideoToCanvas(video, context, width, height, progress => {
+      onProgress(progress);
+    });
+    if (recorder.state !== "inactive") recorder.stop();
+    await stopped;
+    canvasStream.getTracks().forEach(track => track.stop());
+    sourceStream?.getTracks?.().forEach(track => track.stop());
+    return new Blob(chunks, { type: mimeType.split(";")[0] || "video/webm" });
+  } finally {
+    video.pause();
+    video.removeAttribute("src");
+    video.load();
+    URL.revokeObjectURL(url);
+  }
+}
+
+function waitForVideoMetadata(video) {
+  return new Promise((resolve, reject) => {
+    video.onloadedmetadata = resolve;
+    video.onerror = () => reject(new Error("视频读取失败"));
+  });
+}
+
+function drawVideoToCanvas(video, context, width, height, onProgress) {
+  return new Promise(resolve => {
+    const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+    const draw = () => {
+      context.drawImage(video, 0, 0, width, height);
+      if (duration) onProgress(Math.min(99, Math.round((video.currentTime / duration) * 100)));
+      if (video.ended || video.paused) {
+        onProgress(100);
+        resolve();
+        return;
+      }
+      requestAnimationFrame(draw);
+    };
+    draw();
+  });
 }
 
 async function compressImageForUpload(file) {

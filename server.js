@@ -777,10 +777,16 @@ function archiveName(value) {
 }
 
 function mediaArchiveName(entry, media, index) {
-  const source = media.originalSrc || media.src || media.name || "";
+  const source = mediaSourceForArchive(media) || media.name || "";
   const ext = path.extname(new URL(source, "http://localhost").pathname) || (media.kind === "video" ? ".mp4" : ".jpg");
-  const base = archiveName(media.name || `${media.kind || "media"}_${index + 1}`);
-  return `${String(index + 1).padStart(3, "0")}_${base}${base.toLowerCase().endsWith(ext.toLowerCase()) ? "" : ext}`;
+  const rawName = media.name || `${media.kind || "media"}_${index + 1}`;
+  const base = archiveName(path.basename(rawName, path.extname(rawName)));
+  return `${String(index + 1).padStart(3, "0")}_${base}${ext}`;
+}
+
+function mediaSourceForArchive(media) {
+  if (media.kind === "video" && media.optimized && media.src) return media.src;
+  return media.originalSrc || media.src;
 }
 
 function voteCountsFor(db) {
@@ -859,7 +865,7 @@ function appendLocalFile(archive, src, targetPath) {
 }
 
 function appendMediaToArchive(archive, entry, media, index) {
-  const src = media.originalSrc || media.src;
+  const src = mediaSourceForArchive(media);
   if (!src) return;
   const targetPath = [
     "作品文件",
