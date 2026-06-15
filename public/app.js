@@ -47,6 +47,7 @@ const CLIENT_IMAGE_QUALITY = 0.86;
 const CLIENT_OPTIMIZABLE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 let uploadQueue = Promise.resolve();
 let uploadQueueLength = 0;
+let uploadProgressStartedAt = 0;
 let galleryDragDepth = 0;
 let processingRefreshTimer = null;
 let deferredRender = false;
@@ -145,7 +146,69 @@ function voterName() {
 }
 
 function setStatus(text) {
+  uploadStatus.classList.remove("is-progress");
   uploadStatus.textContent = text;
+}
+
+function setUploadProgress(title, loaded, total, detail = "") {
+  const safeTotal = Math.max(0, Number(total) || 0);
+  const safeLoaded = Math.min(safeTotal || loaded, Math.max(0, Number(loaded) || 0));
+  const percent = safeTotal ? Math.min(100, Math.round((safeLoaded / safeTotal) * 100)) : 0;
+  const elapsed = Math.max(0.2, (Date.now() - uploadProgressStartedAt) / 1000);
+  const speed = safeLoaded / elapsed;
+  const remaining = safeTotal && speed ? Math.max(0, (safeTotal - safeLoaded) / speed) : 0;
+
+  uploadStatus.classList.add("is-progress");
+  uploadStatus.innerHTML = "";
+
+  const shell = document.createElement("div");
+  shell.className = "upload-progress-shell";
+
+  const head = document.createElement("div");
+  head.className = "upload-progress-head";
+  const label = document.createElement("strong");
+  label.textContent = title;
+  const value = document.createElement("span");
+  value.textContent = `${percent}%`;
+  head.append(label, value);
+
+  const track = document.createElement("div");
+  track.className = "upload-progress-track";
+  const bar = document.createElement("span");
+  bar.style.width = `${percent}%`;
+  track.appendChild(bar);
+
+  const meta = document.createElement("div");
+  meta.className = "upload-progress-meta";
+  const left = document.createElement("span");
+  left.textContent = `${formatFileSize(safeLoaded)} / ${formatFileSize(safeTotal)}`;
+  const right = document.createElement("span");
+  right.textContent = safeTotal
+    ? `约剩 ${formatDuration(remaining)} · ${formatFileSize(speed)}/s`
+    : detail;
+  meta.append(left, right);
+
+  if (detail) {
+    const note = document.createElement("div");
+    note.className = "upload-progress-note";
+    note.textContent = detail;
+    shell.append(head, track, meta, note);
+  } else {
+    shell.append(head, track, meta);
+  }
+
+  uploadStatus.appendChild(shell);
+}
+
+function formatDuration(seconds) {
+  const value = Math.max(0, Math.ceil(Number(seconds) || 0));
+  if (value < 60) return `${value}秒`;
+  const minutes = Math.floor(value / 60);
+  const rest = value % 60;
+  if (minutes < 60) return rest ? `${minutes}分${rest}秒` : `${minutes}分钟`;
+  const hours = Math.floor(minutes / 60);
+  const minuteRest = minutes % 60;
+  return minuteRest ? `${hours}小时${minuteRest}分钟` : `${hours}小时`;
 }
 
 function showToast(text, tone = "") {
@@ -1120,6 +1183,7 @@ function renderGallery() {
 }
 
 function openPreview(entry) {
+  stopEmbeddedMedia();
   previewEntry = entry;
   renderPreviewContent();
   previewDialog.showModal();
@@ -1167,11 +1231,13 @@ function renderPreviewContent() {
 }
 
 function closePreviewDialog() {
+  stopEmbeddedMedia(previewDialog);
   previewDialog.close();
 }
 
 function openImageViewer(index) {
   if (!previewEntry) return;
+  stopEmbeddedMedia();
   viewerIndex = index;
   resetViewerZoom();
   renderImageViewer();
@@ -1186,6 +1252,7 @@ function openImageViewer(index) {
 
 function renderImageViewer() {
   const item = previewEntry.media[viewerIndex];
+  stopEmbeddedMedia(viewerStage);
   viewerTitle.textContent = entryTitle(previewEntry);
   viewerMeta.textContent = `${entryMeta(previewEntry)} · ${viewerIndex + 1}/${previewEntry.media.length}`;
   viewerStage.innerHTML = item.kind === "video"
@@ -1211,6 +1278,14 @@ function shiftViewer(step) {
 
 function viewerMedia() {
   return viewerStage.querySelector(".viewer-media");
+}
+
+function stopEmbeddedMedia(root = document) {
+  root.querySelectorAll?.("video, audio").forEach(media => {
+    media.pause();
+    media.removeAttribute("src");
+    media.load();
+  });
 }
 
 function applyViewerZoom() {
@@ -1652,7 +1727,9 @@ async function uploadFiles(files, moduleName) {
         : await uploadBatchToServer(batch, moduleName, batchNo, batches.length, uploadSessionId);
       uploadedFiles += batch.length;
       totalMedia += result.media || 0;
-      setStatus(`正在上传到 ${moduleName}：已完成 ${uploadedFiles}/${mediaFiles.length} 个文件，继续处理...`);
+      if (!uploadStatus.classList.contains("is-progress")) {
+        setStatus(`正在上传到 ${moduleName}：已完成 ${uploadedFiles}/${mediaFiles.length} 个文件，继续处理...`);
+      }
     }
     const uploadOwner = adminMode ? "文件夹识别到的摄影师" : voterName();
     setStatus(`${moduleName} 上传完成：已处理 ${totalMedia} 个媒体文件，作品列表已刷新。`);
@@ -1693,9 +1770,21 @@ async function uploadBatchToServer(batch, moduleName, batchNo, batchCount, uploa
     formData.append("files", file, relativePath);
   });
   setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batchCount} 批正在上传并生成展示版...`);
-  return fetchJson("/api/upload", {
-    method: "POST",
-    body: formData
+  const totalBytes = batch.reduce((sum, file) => sum + (file.size || 0), 0);
+  uploadProgressStartedAt = Date.now();
+  setUploadProgress(
+    `正在上传到 ${moduleName}`,
+    0,
+    totalBytes,
+    `第 ${batchNo}/${batchCount} 批 · 上传后生成展示版`
+  );
+  return uploadFormDataWithProgress("/api/upload", formData, event => {
+    setUploadProgress(
+      `正在上传到 ${moduleName}`,
+      event.loaded,
+      event.lengthComputable ? event.total : totalBytes,
+      `第 ${batchNo}/${batchCount} 批 · 上传后生成展示版`
+    );
   });
 }
 
@@ -1729,19 +1818,35 @@ async function uploadBatchToObjectStorage(batch, moduleName, batchNo, batchCount
   const signedFiles = Array.isArray(signed.files) ? signed.files : [];
   const uploaded = [];
   let completed = 0;
+  const uploadSizes = signedFiles.map((signedFile, index) => {
+    const source = findSignedSourceFile(uploadBatch, signedFile) || uploadBatch[index];
+    return source?.size || 0;
+  });
+  const uploadedBytesByFile = new Array(signedFiles.length).fill(0);
+  const totalUploadBytes = uploadSizes.reduce((sum, size) => sum + size, 0);
+  uploadProgressStartedAt = Date.now();
+  const updateDirectUploadProgress = () => {
+    const loadedBytes = uploadedBytesByFile.reduce((sum, size) => sum + size, 0);
+    setUploadProgress(
+      `正在上传到 ${moduleName}`,
+      loadedBytes,
+      totalUploadBytes,
+      `第 ${batchNo}/${batchCount} 批 · 已完成 ${completed}/${signedFiles.length} 个文件`
+    );
+  };
+  updateDirectUploadProgress();
 
   await runLimited(signedFiles, OBJECT_UPLOAD_CONCURRENCY, async (signedFile, index) => {
     const source = findSignedSourceFile(uploadBatch, signedFile) || uploadBatch[index];
     if (!source) return;
-    const response = await fetch(signedFile.uploadUrl, {
-      method: signedFile.method || "PUT",
-      headers: signedFile.contentType ? { "Content-Type": signedFile.contentType } : {},
-      body: source
+    await uploadObjectWithProgress(signedFile, source, event => {
+      uploadedBytesByFile[index] = event.lengthComputable ? event.loaded : source.size;
+      updateDirectUploadProgress();
     });
-    if (!response.ok) throw new Error(`对象存储上传失败：${response.status}`);
     uploaded.push(signedFile);
     completed += 1;
-    setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batchCount} 批直传 ${completed}/${signedFiles.length}...`);
+    uploadedBytesByFile[index] = source.size || uploadedBytesByFile[index];
+    updateDirectUploadProgress();
   });
 
   setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batchCount} 批写入作品列表...`);
@@ -1756,6 +1861,44 @@ function findSignedSourceFile(batch, signedFile) {
   return batch.find(file => {
     const relativePath = file.relativePath || file.webkitRelativePath || file.name;
     return relativePath === signedFile.relativePath;
+  });
+}
+
+function uploadObjectWithProgress(signedFile, source, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(signedFile.method || "PUT", signedFile.uploadUrl);
+    if (signedFile.contentType) xhr.setRequestHeader("Content-Type", signedFile.contentType);
+    xhr.upload.onprogress = onProgress;
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error(`对象存储上传失败：${xhr.status}`));
+    };
+    xhr.onerror = () => reject(new Error("对象存储上传失败，请检查网络后重试"));
+    xhr.ontimeout = () => reject(new Error("对象存储上传超时，请重试"));
+    xhr.send(source);
+  });
+}
+
+function uploadFormDataWithProgress(url, formData, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    xhr.upload.onprogress = onProgress;
+    xhr.onload = () => {
+      let body = {};
+      try {
+        body = xhr.responseText ? JSON.parse(xhr.responseText) : {};
+      } catch {
+        reject(new Error("服务器返回内容无法识别"));
+        return;
+      }
+      if (xhr.status >= 200 && xhr.status < 300) resolve(body);
+      else reject(new Error(body.error || "上传失败，请重试"));
+    };
+    xhr.onerror = () => reject(new Error("上传失败，请检查网络后重试"));
+    xhr.ontimeout = () => reject(new Error("上传超时，请重试"));
+    xhr.send(formData);
   });
 }
 
@@ -2392,6 +2535,7 @@ viewerZoomOut.addEventListener("click", () => changeViewerZoom(-0.25));
 viewerZoomIn.addEventListener("click", () => changeViewerZoom(0.25));
 viewerFit.addEventListener("click", resetViewerZoom);
 imageViewer.addEventListener("close", () => {
+  stopEmbeddedMedia(imageViewer);
   document.documentElement.classList.remove("viewer-open");
   document.body.classList.remove("viewer-open");
   // Clearing the stage removes the <video> element so playback (and its audio

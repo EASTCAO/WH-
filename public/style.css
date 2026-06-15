@@ -8926,10 +8926,79 @@ body.is-admin .layout-main > .upload-status-main {
   display: none;
 }
 
+.layout-main > .upload-status-main.is-progress {
+  align-items: stretch;
+  padding: 12px 14px;
+}
+
+.upload-progress-shell {
+  width: 100%;
+  display: grid;
+  gap: 8px;
+}
+
+.upload-progress-head,
+.upload-progress-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.upload-progress-head strong {
+  color: var(--ui-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.upload-progress-head span {
+  color: var(--ui-text);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.upload-progress-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eef0f2;
+}
+
+.upload-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #111111;
+  transition: width 160ms ease;
+}
+
+.upload-progress-meta,
+.upload-progress-note {
+  color: var(--ui-text-soft);
+  font-size: 12px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+.upload-progress-note {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 body[data-theme="dark"] .layout-main > .upload-status-main {
   border-color: var(--ui-line) !important;
   background: var(--ui-surface) !important;
   color: var(--ui-text-soft) !important;
+}
+
+body[data-theme="dark"] .upload-progress-track {
+  background: #2a2a2a;
+}
+
+body[data-theme="dark"] .upload-progress-track span {
+  background: #f5f5f5;
 }
 
 body:not(.is-admin) .photographer-result-card {
