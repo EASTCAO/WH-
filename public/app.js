@@ -1973,9 +1973,7 @@ function shouldOptimizeUploadImage(file) {
 }
 
 function shouldOptimizeUploadVideo(file) {
-  if (file.size < CLIENT_VIDEO_OPTIMIZE_MIN_BYTES) return false;
-  if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) return false;
-  return file.type.startsWith("video/") || /\.(mp4|mov|m4v|webm)$/i.test(file.name);
+  return false;
 }
 
 function preferredVideoMimeType() {
