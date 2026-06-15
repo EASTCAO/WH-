@@ -24,9 +24,10 @@ const IMAGE_WEBP_EFFORT = Number(process.env.IMAGE_WEBP_EFFORT || 2);
 const IMAGE_OPTIMIZE_MIN_BYTES = Number(process.env.IMAGE_OPTIMIZE_MIN_MB || 4) * 1024 * 1024;
 const IMAGE_MAX_DIMENSION = Number(process.env.IMAGE_MAX_DIMENSION || 2200);
 const VIDEO_PRESET = process.env.VIDEO_PRESET || "veryfast";
-const VIDEO_DISPLAY_WIDTH = Number(process.env.VIDEO_DISPLAY_WIDTH || 1280);
-const VIDEO_DISPLAY_HEIGHT = Number(process.env.VIDEO_DISPLAY_HEIGHT || 720);
-const VIDEO_DISPLAY_BITRATE = process.env.VIDEO_DISPLAY_BITRATE || "1200k";
+const VIDEO_DISPLAY_WIDTH = Number(process.env.VIDEO_DISPLAY_WIDTH || 1920);
+const VIDEO_DISPLAY_HEIGHT = Number(process.env.VIDEO_DISPLAY_HEIGHT || 1080);
+const VIDEO_DISPLAY_BITRATE = process.env.VIDEO_DISPLAY_BITRATE || "5000k";
+const VIDEO_DISPLAY_BUFSIZE = process.env.VIDEO_DISPLAY_BUFSIZE || "10000k";
 const VIDEO_DISPLAY_AUDIO_BITRATE = process.env.VIDEO_DISPLAY_AUDIO_BITRATE || "128k";
 const OPTIMIZE_CONCURRENCY = Math.max(1, Number(process.env.OPTIMIZE_CONCURRENCY || 2));
 const STORAGE_ENDPOINT = normalizeName(process.env.STORAGE_ENDPOINT);
@@ -1198,7 +1199,7 @@ async function createOptimizedMedia(sourcePath, ext, mediaKind, targetOverride =
       "-vf", `scale='min(${VIDEO_DISPLAY_WIDTH},iw)':'min(${VIDEO_DISPLAY_HEIGHT},ih)':force_original_aspect_ratio=decrease`,
       "-b:v", VIDEO_DISPLAY_BITRATE,
       "-maxrate", VIDEO_DISPLAY_BITRATE,
-      "-bufsize", "4400k",
+      "-bufsize", VIDEO_DISPLAY_BUFSIZE,
       "-profile:v", "main",
       "-pix_fmt", "yuv420p",
       "-c:a", "aac",
