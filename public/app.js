@@ -36,6 +36,7 @@ const tiebreakerSelected = new Map();
 let completedModules = new Set();
 let isSubmittingVote = false;
 let resultDialogDismissed = false;
+let suppressNextResultDialog = false;
 const selected = new Map();
 
 const THEME_KEY = "photoReviewTheme";
@@ -948,7 +949,8 @@ function render() {
   renderGallery();
   renderTiebreakers();
   renderResults();
-  openResultDialogIfNeeded();
+  if (suppressNextResultDialog) suppressNextResultDialog = false;
+  else openResultDialogIfNeeded();
 }
 
 function flushDeferredRender() {
@@ -1740,6 +1742,7 @@ async function uploadFiles(files, moduleName) {
     const uploadOwner = adminMode ? "文件夹识别到的摄影师" : voterName();
     setStatus(`${moduleName} 上传完成：已处理 ${totalMedia} 个媒体文件，作品列表已刷新。`);
     showToast(`${moduleName} 上传成功，已记录为${uploadOwner}的作品`, "success");
+    suppressNextResultDialog = true;
     await loadData();
   } catch (error) {
     setStatus(error.message);
