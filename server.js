@@ -243,6 +243,14 @@ function sendText(res, status, text) {
   res.end(text);
 }
 
+function sendRedirect(res, location) {
+  res.writeHead(302, {
+    "Location": location,
+    "Cache-Control": "no-store"
+  });
+  res.end();
+}
+
 function collectRawBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -406,6 +414,22 @@ function publicStorageUrl(key) {
   return `${STORAGE_PUBLIC_BASE_URL.replace(/\/+$/, "")}/${encodeS3Key(key)}`;
 }
 
+function isStoragePublicUrl(value) {
+  if (!storageConfigured()) return false;
+  try {
+    const url = new URL(value);
+    const base = new URL(STORAGE_PUBLIC_BASE_URL);
+    return url.protocol === base.protocol && url.host === base.host;
+  } catch {
+    return false;
+  }
+}
+
+function proxiedImageUrl(value) {
+  if (!isStoragePublicUrl(value)) return value;
+  return `/api/media-proxy?url=${encodeURIComponent(value)}`;
+}
+
 function createPresignedPutUrl(key, contentType, cacheControl) {
   const endpoint = new URL(STORAGE_ENDPOINT);
   const host = endpoint.host;
@@ -478,6 +502,40 @@ async function putStorageObject(key, diskPath, contentType) {
     fs.createReadStream(diskPath).on("error", reject).pipe(request);
   });
   return publicStorageUrl(key);
+}
+
+function handleMediaProxy(req, res, url) {
+  const target = normalizeName(url.searchParams.get("url"));
+  if (!isStoragePublicUrl(target)) {
+    sendText(res, 403, "Forbidden");
+    return;
+  }
+
+  const targetUrl = new URL(target);
+  const request = https.request(targetUrl, { method: "GET" }, upstream => {
+    const contentType = upstream.headers["content-type"] || contentTypeFor(targetUrl.pathname);
+    if (upstream.statusCode < 200 || upstream.statusCode >= 300) {
+      res.writeHead(upstream.statusCode || 502, { "Content-Type": "text/plain; charset=utf-8" });
+      upstream.pipe(res);
+      return;
+    }
+    if (!String(contentType).startsWith("image/")) {
+      upstream.resume();
+      sendText(res, 415, "Unsupported media type");
+      return;
+    }
+    const headers = {
+      "Content-Type": contentType,
+      "Cache-Control": "public, max-age=86400"
+    };
+    if (upstream.headers["content-length"]) headers["Content-Length"] = upstream.headers["content-length"];
+    res.writeHead(200, headers);
+    upstream.pipe(res);
+  });
+  request.setTimeout(30000, () => request.destroy(new Error("media proxy timeout")));
+  request.on("error", () => sendRedirect(res, target));
+  req.on("close", () => request.destroy());
+  request.end();
 }
 
 function parseSkuAndTitle(folderName) {
@@ -707,6 +765,10 @@ function parseUploadPath(relativePath, fallbackModuleName) {
 
 function publicEntry(entry) {
   const media = entry.media || (entry.images || []).map(src => ({ src, kind: "image" }));
+  const viewMedia = media.map(item => ({
+    ...item,
+    src: item.kind === "image" ? proxiedImageUrl(item.src) : item.src
+  }));
   const displaySku = displaySkuForEntry(entry);
   return {
     id: entry.id,
@@ -717,10 +779,10 @@ function publicEntry(entry) {
     sku: displaySku,
     title: entry.title,
     sequence: entry.sequence || 0,
-    mediaCount: media.length,
-    imageCount: media.filter(item => item.kind === "image").length,
-    videoCount: media.filter(item => item.kind === "video").length,
-    media,
+    mediaCount: viewMedia.length,
+    imageCount: viewMedia.filter(item => item.kind === "image").length,
+    videoCount: viewMedia.filter(item => item.kind === "video").length,
+    media: viewMedia,
     createdAt: entry.createdAt
   };
 }
@@ -728,7 +790,7 @@ function publicEntry(entry) {
 function voterMedia(entry) {
   const media = entry.media || (entry.images || []).map(src => ({ src, kind: "image" }));
   return media.map(item => ({
-    src: item.src,
+    src: item.kind === "image" ? proxiedImageUrl(item.src) : item.src,
     kind: item.kind,
     processing: Boolean(item.processing)
   }));
@@ -2124,6 +2186,11 @@ function handleApi(req, res) {
         }
       }
     });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/media-proxy") {
+    handleMediaProxy(req, res, url);
     return;
   }
 
