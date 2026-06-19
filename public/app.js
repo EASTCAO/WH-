@@ -1526,6 +1526,11 @@ function renderResults() {
 
 function renderResultDialog() {
   if (!resultDialogGrid) return;
+  if (!resultsPublished) {
+    resultDialogGrid.innerHTML = "";
+    if (resultDialog?.open) resultDialog.close();
+    return;
+  }
   resultDialogGrid.innerHTML = modules.map(module => {
     const totalVotes = moduleVoteTotal(module.name);
     const topEntries = moduleResultList(module.name).slice(0, resultLimitForModule(module.name));
@@ -2324,6 +2329,7 @@ if (createNextPeriod) createNextPeriod.addEventListener("click", () => {
 });
 if (photographerResultCard) {
   photographerResultCard.addEventListener("click", () => {
+    if (!resultsPublished) return;
     resultDialogDismissed = false;
     openResultDialogIfNeeded(true);
   });
