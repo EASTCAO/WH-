@@ -522,12 +522,10 @@ function bestSkuCandidate(values, photographers = []) {
 }
 
 function refineUploadSku(info, relativePath, photographers = []) {
-  const parts = normalizeName(relativePath).split(/[\\/]+/).filter(Boolean);
   const names = [
     info.sku,
     info.title,
-    info.workFolder,
-    ...parts.map(part => path.basename(part, path.extname(part)))
+    info.workFolder
   ];
   const sku = bestSkuCandidate(names, photographers);
   if (!sku || sku === info.sku) return info;
@@ -537,11 +535,9 @@ function refineUploadSku(info, relativePath, photographers = []) {
 }
 
 function displaySkuForEntry(entry) {
-  const media = entry.media || (entry.images || []).map(src => ({ src, kind: "image" }));
   return bestSkuCandidate([
     entry.sku,
-    entry.title,
-    ...(media || []).map(item => item.name || item.originalFilename || item.src || "")
+    entry.title
   ]) || entry.sku;
 }
 
