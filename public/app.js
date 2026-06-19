@@ -1446,7 +1446,7 @@ async function submitTiebreakerVote(tiebreakerId) {
 }
 
 function renderResults() {
-  const hasResultEntries = results.some(entry => entry.mediaCount > 0 || entry.votes > 0 || entry.sku);
+  const hasResultEntries = results.some(entry => entry.votes > 0 || entry.tiebreakerVotes > 0);
   const canViewResults = adminMode || (resultsPublished && hasResultEntries);
   const showPhotographerResultCard = !adminMode && resultsPublished && hasResultEntries;
   if (resultsPanel) resultsPanel.hidden = adminMode || showPhotographerResultCard || !canViewResults;
@@ -1558,7 +1558,7 @@ function renderResultDialog() {
 
 function openResultDialogIfNeeded(force = false) {
   if (!resultDialog) return;
-  const hasResultEntries = results.some(entry => entry.mediaCount > 0 || entry.votes > 0 || entry.sku);
+  const hasResultEntries = results.some(entry => entry.votes > 0 || entry.tiebreakerVotes > 0);
   if (!resultsPublished || !hasResultEntries) {
     resultDialogDismissed = false;
     if (resultDialog.open) resultDialog.close();

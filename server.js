@@ -196,6 +196,10 @@ function currentBallots(db) {
   return (db.ballots || []).filter(ballot => (ballot.periodId || db.currentPeriodId) === db.currentPeriodId);
 }
 
+function hasAnyCurrentBallot(db) {
+  return currentBallots(db).some(ballot => Array.isArray(ballot.entryIds) && ballot.entryIds.length > 0);
+}
+
 function currentPeriod(db) {
   return db.periods.find(period => period.id === db.currentPeriodId) || ensurePeriods(db);
 }
@@ -2009,7 +2013,13 @@ async function handleStatusUpdate(req, res) {
   const db = readDb();
   const period = currentPeriod(db);
   if (Object.prototype.hasOwnProperty.call(payload, "votingOpen")) period.votingOpen = Boolean(payload.votingOpen);
-  if (Object.prototype.hasOwnProperty.call(payload, "resultsPublished")) period.resultsPublished = Boolean(payload.resultsPublished);
+  if (Object.prototype.hasOwnProperty.call(payload, "resultsPublished")) {
+    const nextPublished = Boolean(payload.resultsPublished);
+    if (nextPublished && !hasAnyCurrentBallot(db)) {
+      return sendJson(res, 400, { error: "还没有投票记录，不能公布结果" });
+    }
+    period.resultsPublished = nextPublished;
+  }
   db.votingOpen = Boolean(period.votingOpen);
   db.resultsPublished = Boolean(period.resultsPublished);
   writeDb(db);
