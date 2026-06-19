@@ -425,7 +425,7 @@ function isStoragePublicUrl(value) {
   }
 }
 
-function proxiedImageUrl(value) {
+function proxiedMediaUrl(value) {
   if (!isStoragePublicUrl(value)) return value;
   return `/api/media-proxy?url=${encodeURIComponent(value)}`;
 }
@@ -512,24 +512,29 @@ function handleMediaProxy(req, res, url) {
   }
 
   const targetUrl = new URL(target);
-  const request = https.request(targetUrl, { method: "GET" }, upstream => {
+  const headers = {};
+  if (req.headers.range) headers.Range = req.headers.range;
+  const request = https.request(targetUrl, { method: "GET", headers }, upstream => {
     const contentType = upstream.headers["content-type"] || contentTypeFor(targetUrl.pathname);
     if (upstream.statusCode < 200 || upstream.statusCode >= 300) {
       res.writeHead(upstream.statusCode || 502, { "Content-Type": "text/plain; charset=utf-8" });
       upstream.pipe(res);
       return;
     }
-    if (!String(contentType).startsWith("image/")) {
+    if (!String(contentType).startsWith("image/") && !String(contentType).startsWith("video/")) {
       upstream.resume();
       sendText(res, 415, "Unsupported media type");
       return;
     }
-    const headers = {
+    const responseHeaders = {
       "Content-Type": contentType,
       "Cache-Control": "public, max-age=86400"
     };
-    if (upstream.headers["content-length"]) headers["Content-Length"] = upstream.headers["content-length"];
-    res.writeHead(200, headers);
+    for (const name of ["content-length", "content-range", "accept-ranges"]) {
+      if (upstream.headers[name]) responseHeaders[name.replace(/(^|-)([a-z])/g, text => text.toUpperCase())] = upstream.headers[name];
+    }
+    if (!responseHeaders["Accept-Ranges"]) responseHeaders["Accept-Ranges"] = "bytes";
+    res.writeHead(upstream.statusCode || 200, responseHeaders);
     upstream.pipe(res);
   });
   request.setTimeout(30000, () => request.destroy(new Error("media proxy timeout")));
@@ -767,7 +772,7 @@ function publicEntry(entry) {
   const media = entry.media || (entry.images || []).map(src => ({ src, kind: "image" }));
   const viewMedia = media.map(item => ({
     ...item,
-    src: item.kind === "image" ? proxiedImageUrl(item.src) : item.src
+    src: proxiedMediaUrl(item.src)
   }));
   const displaySku = displaySkuForEntry(entry);
   return {
@@ -790,7 +795,7 @@ function publicEntry(entry) {
 function voterMedia(entry) {
   const media = entry.media || (entry.images || []).map(src => ({ src, kind: "image" }));
   return media.map(item => ({
-    src: item.kind === "image" ? proxiedImageUrl(item.src) : item.src,
+    src: proxiedMediaUrl(item.src),
     kind: item.kind,
     processing: Boolean(item.processing)
   }));
