@@ -2015,6 +2015,9 @@ async function handleStatusUpdate(req, res) {
   if (Object.prototype.hasOwnProperty.call(payload, "votingOpen")) period.votingOpen = Boolean(payload.votingOpen);
   if (Object.prototype.hasOwnProperty.call(payload, "resultsPublished")) {
     const nextPublished = Boolean(payload.resultsPublished);
+    if (nextPublished && period.votingOpen) {
+      return sendJson(res, 400, { error: "Voting is still open. Close voting before publishing results." });
+    }
     if (nextPublished && !hasAnyCurrentBallot(db)) {
       return sendJson(res, 400, { error: "还没有投票记录，不能公布结果" });
     }
