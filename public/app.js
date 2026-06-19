@@ -1205,13 +1205,17 @@ function renderPreviewContent() {
     <button class="media-preview-card${item.processing ? " processing" : ""}" type="button" data-index="${index}">
       ${item.kind === "video"
         ? `<span class="video-preview-placeholder" aria-hidden="true"><span class="video-play-icon">▶</span></span><span class="media-kind-badge">视频</span><span class="media-play-badge">点击播放</span>`
-        : `<img src="${item.src}" loading="lazy" alt="${entryTitle(previewEntry)} 第 ${index + 1} 张">`}
+        : `<img src="${item.src}" data-fallback-src="${item.fallbackSrc || ""}" loading="lazy" alt="${entryTitle(previewEntry)} 第 ${index + 1} 张">`}
       ${item.processing ? `<span class="media-processing">处理中</span>` : ""}
       <span class="media-error" hidden>加载失败，点击打开原文件</span>
     </button>
   `).join("");
   mediaPreviewGrid.querySelectorAll("img").forEach(media => {
     media.addEventListener("error", () => {
+      if (media.dataset.fallbackSrc && media.src !== new URL(media.dataset.fallbackSrc, window.location.href).toString()) {
+        media.src = media.dataset.fallbackSrc;
+        return;
+      }
       const retryCount = Number(media.dataset.retryCount || "0");
       if (retryCount < 2) {
         media.dataset.retryCount = String(retryCount + 1);
