@@ -1455,53 +1455,35 @@ function renderResults() {
     photographerResultCard.hidden = !showPhotographerResultCard;
     if (showPhotographerResultCard) {
       photographerResultCard.innerHTML = `
-        <span>评优结果</span>
+        <span>投票结果</span>
         <strong>${escapeHtml(shortPeriodLabel())}</strong>
       `;
     }
   }
   if (!canViewResults) return;
 
-  resultsTitle.textContent = resultsPublished ? "最终评优结果" : (adminMode ? "后台票数预览" : "最终结果");
+  resultsTitle.textContent = resultsPublished ? "完整投票结果" : (adminMode ? "后台票数预览" : "最终结果");
   resultsNote.textContent = canViewResults
-    ? (adminMode && !resultsPublished ? "当前仅管理员可见，公布后摄影师才能看到。" : "每个模块优先展示获奖结果，完整排名在卡片下方查看。")
-    : "投票期间不显示实时票数，管理员公布后这里会显示最终排名。";
+    ? (adminMode && !resultsPublished ? "当前仅管理员可见，公布后摄影师才能看到。" : "所有作品按票数排序展示；获奖名次已高亮，票数和占比同步列出。")
+    : "投票期间不显示实时票数，管理员公布后这里会显示完整排名。";
 
   resultsBox.innerHTML = modules.map(module => {
     const totalVotes = moduleVoteTotal(module.name);
     const awardLimit = resultLimitForModule(module.name);
     const list = moduleResultList(module.name);
-    const awardEntries = list.slice(0, awardLimit);
-    const otherEntries = list.slice(awardLimit);
-    const awardRows = awardEntries.length
-      ? awardEntries.map((entry, index) => {
-        const percent = votePercent(entry, totalVotes);
+    const rankRows = list.length
+      ? list.map((entry, index) => {
+        const rank = index + 1;
+        const isAward = index < awardLimit;
+        const awardRankClass = isAward && rank <= 3 ? ` result-rank-${rank}` : "";
         return `
-          <article class="winner-card rank-${index + 1}">
-            <span class="winner-rank">第 ${index + 1} 名</span>
-            <strong>${resultDisplayTitle(entry)}</strong>
-            <div class="winner-score">
-              <span>${entry.votes} 票${tiebreakerText(entry)}</span>
-              <small>${percent}</small>
-            </div>
-            <div class="winner-bar" aria-hidden="true"><i style="width:${percent}"></i></div>
-          </article>
+          <div class="result-row${awardRankClass} ${isAward ? "award-row" : "normal-row"}">
+            <span><b>第 ${rank} 名${isAward ? " · 获奖" : ""}</b> ${resultDisplayTitle(entry)}</span>
+            <strong><span>${entry.votes} 票${tiebreakerText(entry)}</span><small>${votePercent(entry, totalVotes)}</small></strong>
+          </div>
         `;
       }).join("")
       : `<div class="result-empty-state"><span>暂无作品</span></div>`;
-    const otherRows = otherEntries.length
-      ? `
-        <details class="result-more">
-          <summary>查看其余 ${otherEntries.length} 个排名</summary>
-          ${otherEntries.map((entry, index) => `
-            <div class="result-row">
-              <span><b>第 ${index + awardLimit + 1} 名</b> ${resultDisplayTitle(entry)}</span>
-              <strong><span>${entry.votes} 票${tiebreakerText(entry)}</span><small>${votePercent(entry, totalVotes)}</small></strong>
-            </div>
-          `).join("")}
-        </details>
-      `
-      : "";
     const tieGroups = adminMode
       ? resultTieGroups(module.name).map(group => {
         const ids = group.map(entry => entry.id);
@@ -1517,11 +1499,10 @@ function renderResults() {
       }).join("")
       : "";
     return `
-      <section class="result-module">
-        <h3>${module.name}<span>获奖 ${awardLimit} 名 · ${resultsPublished ? "已公布" : "预览"}</span></h3>
-        <div class="winner-grid">${awardRows}</div>
+      <section class="result-module full-result-module">
+        <h3>${module.name}<span>完整 ${list.length} 名 · 获奖 ${awardLimit} 名</span></h3>
+        <div class="result-full-list">${rankRows}</div>
         ${tieGroups ? `<div class="tie-admin-list">${tieGroups}</div>` : ""}
-        ${otherRows}
       </section>
     `;
   }).join("");
@@ -1554,12 +1535,13 @@ function renderResultDialog() {
       : `<div class="empty compact">暂无作品</div>`;
     return `
       <section class="result-dialog-module">
-        <h3>${module.name}<span>全部 ${allEntries.length} 名 · 获奖 ${awardLimit} 名</span></h3>
+        <h3>${module.name}<span>完整排名 ${allEntries.length} 名 · 获奖 ${awardLimit} 名</span></h3>
         ${rows}
       </section>
     `;
   }).join("");
 }
+
 function openResultDialogIfNeeded(force = false) {
   if (!resultDialog) return;
   const hasResultEntries = results.some(entry => entry.votes > 0 || entry.tiebreakerVotes > 0);
