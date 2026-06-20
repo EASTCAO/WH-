@@ -9718,3 +9718,120 @@ body[data-theme="dark"] .full-result-module .result-row.normal-row b {
     padding: 8px !important;
   }
 }
+
+/* Result overview board: fit all modules into one dashboard-style view on desktop. */
+.result-dialog.full-vote-dialog {
+  width: min(1500px, calc(100vw - 18px)) !important;
+  max-height: calc(100vh - 16px) !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-shell {
+  max-height: calc(100vh - 16px) !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-header {
+  min-height: 0 !important;
+  padding: 10px 14px !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-header h2 {
+  margin: 2px 0 0 !important;
+  font-size: 20px !important;
+  line-height: 1.1 !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-header p {
+  margin: 3px 0 0 !important;
+  font-size: 12px !important;
+}
+
+.result-dialog.full-vote-dialog .phase-badge {
+  padding: 3px 8px !important;
+  font-size: 11px !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  align-items: stretch !important;
+  gap: 8px !important;
+  max-height: calc(100vh - 86px) !important;
+  overflow-y: auto !important;
+  padding: 8px !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-module {
+  display: block !important;
+  min-height: 0 !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 8px !important;
+  border-radius: 7px !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-module h3 {
+  margin: 0 0 6px !important;
+  padding: 0 0 6px !important;
+  gap: 6px !important;
+  font-size: 14px !important;
+  line-height: 1.15 !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-module h3 span {
+  padding: 2px 6px !important;
+  font-size: 10px !important;
+  white-space: nowrap !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-row {
+  min-height: 30px !important;
+  margin: 0 0 4px !important;
+  padding: 4px 6px !important;
+  grid-template-columns: 66px minmax(0, 1fr) 44px !important;
+  gap: 5px !important;
+  border-radius: 6px !important;
+}
+
+.result-dialog.full-vote-dialog .rank-mark {
+  min-height: 22px !important;
+  padding: 0 5px !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+}
+
+.result-dialog.full-vote-dialog .rank-title {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-row strong {
+  min-width: 40px !important;
+  font-size: 12px !important;
+  line-height: 1.1 !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-row strong small {
+  font-size: 10px !important;
+  line-height: 1.1 !important;
+}
+
+@media (max-width: 1180px) {
+  .result-dialog.full-vote-dialog .result-dialog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .result-dialog.full-vote-dialog .result-dialog-grid {
+    grid-template-columns: 1fr !important;
+    max-height: calc(100vh - 94px) !important;
+  }
+
+  .result-dialog.full-vote-dialog .result-dialog-row {
+    min-height: 38px !important;
+    grid-template-columns: 76px minmax(0, 1fr) 52px !important;
+  }
+}
