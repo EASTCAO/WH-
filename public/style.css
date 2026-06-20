@@ -10049,3 +10049,45 @@ body[data-theme="dark"] .result-module .tie-admin-row {
 .admin-results-preview .result-module.full-result-module h3 {
   margin-bottom: 6px !important;
 }
+
+/* Result dialog compact header: give more vertical space to rankings. */
+.result-dialog.full-vote-dialog .result-dialog-header {
+  min-height: 34px !important;
+  padding: 4px 10px !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-header > div {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-header h2,
+.result-dialog.full-vote-dialog .result-dialog-header p {
+  display: none !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-header .phase-badge {
+  height: 24px !important;
+  padding: 0 9px !important;
+  font-size: 12px !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-header .round-button {
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  min-height: 30px !important;
+  font-size: 20px !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-grid {
+  max-height: calc(100vh - 50px) !important;
+}
+
+@media (max-width: 640px) {
+  .result-dialog.full-vote-dialog .result-dialog-grid {
+    max-height: calc(100vh - 54px) !important;
+  }
+}
