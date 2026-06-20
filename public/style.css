@@ -9835,3 +9835,66 @@ body[data-theme="dark"] .full-result-module .result-row.normal-row b {
     grid-template-columns: 76px minmax(0, 1fr) 52px !important;
   }
 }
+
+/* Tiebreaker controls: keep the action compact and horizontally readable. */
+.full-result-module .tie-admin-list,
+.result-module .tie-admin-list {
+  gap: 6px !important;
+  margin-top: 8px !important;
+}
+
+.full-result-module .tie-admin-row,
+.result-module .tie-admin-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-height: 34px !important;
+  padding: 6px 8px !important;
+  border: 1px solid var(--ui-line, #dfe3e8) !important;
+  border-radius: 7px !important;
+  background: #fbfcfd !important;
+  color: #475467 !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+  line-height: 1.25 !important;
+}
+
+.full-result-module .tie-admin-row span,
+.result-module .tie-admin-row span {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.full-result-module .create-tiebreaker,
+.result-module .create-tiebreaker {
+  width: auto !important;
+  min-width: 64px !important;
+  max-width: 76px !important;
+  min-height: 26px !important;
+  padding: 0 10px !important;
+  border-radius: 999px !important;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+}
+
+.full-result-module .create-tiebreaker:disabled,
+.result-module .create-tiebreaker:disabled {
+  background: #eef0f3 !important;
+  color: #667085 !important;
+}
+
+body[data-theme="dark"] .full-result-module .tie-admin-row,
+body[data-theme="dark"] .result-module .tie-admin-row {
+  border-color: var(--ui-line, #333333) !important;
+  background: #202020 !important;
+  color: var(--ui-text-soft, #b8b8b0) !important;
+}
