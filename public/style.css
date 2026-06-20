@@ -10114,3 +10114,70 @@ body[data-theme="dark"] .result-module .tie-admin-row {
   margin-right: 4px !important;
   white-space: nowrap !important;
 }
+
+/* Softer vote selection control: no heavy black filled circle. */
+.entry-card .vote-check,
+.vote-check {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(17, 17, 17, 0.22) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: transparent !important;
+  box-shadow: 0 1px 4px rgba(17, 17, 17, 0.06) !important;
+  transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease !important;
+}
+
+.entry-card .vote-check:hover:not(:disabled),
+.vote-check:hover:not(:disabled) {
+  border-color: rgba(29, 111, 97, 0.52) !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 4px rgba(29, 111, 97, 0.08) !important;
+  transform: translateY(-1px) !important;
+}
+
+.entry-card.selected .vote-check,
+.entry-card.selected .vote-check:hover,
+.entry-card.selected .vote-check:focus-visible {
+  border-color: rgba(29, 111, 97, 0.72) !important;
+  background: #f3fbf8 !important;
+  color: #1d6f61 !important;
+  box-shadow: inset 0 0 0 4px #ffffff, 0 0 0 3px rgba(29, 111, 97, 0.10) !important;
+}
+
+.entry-card.selected .vote-check::after {
+  content: "✓" !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  color: #1d6f61 !important;
+  font-size: 14px !important;
+  font-weight: 850 !important;
+  line-height: 1 !important;
+}
+
+.entry-card .vote-check:disabled,
+.vote-check:disabled {
+  opacity: 0.45 !important;
+  background: #f4f4f2 !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="dark"] .entry-card .vote-check,
+body[data-theme="dark"] .vote-check {
+  border-color: rgba(245, 245, 240, 0.24) !important;
+  background: rgba(32, 32, 32, 0.92) !important;
+}
+
+body[data-theme="dark"] .entry-card.selected .vote-check,
+body[data-theme="dark"] .entry-card.selected .vote-check:hover {
+  border-color: rgba(143, 197, 178, 0.72) !important;
+  background: #202a25 !important;
+  color: #8fc5b2 !important;
+  box-shadow: inset 0 0 0 4px #181818, 0 0 0 3px rgba(143, 197, 178, 0.12) !important;
+}
+
+body[data-theme="dark"] .entry-card.selected .vote-check::after {
+  color: #8fc5b2 !important;
+}
