@@ -9898,3 +9898,80 @@ body[data-theme="dark"] .result-module .tie-admin-row {
   background: #202020 !important;
   color: var(--ui-text-soft, #b8b8b0) !important;
 }
+
+/* Result overview: compact enough to show modules with 11 entries. */
+.result-dialog.full-vote-dialog .result-dialog-header {
+  padding: 8px 12px !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-header h2 {
+  font-size: 18px !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-header p {
+  font-size: 11px !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-grid {
+  gap: 6px !important;
+  max-height: calc(100vh - 74px) !important;
+  padding: 6px !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-module {
+  padding: 6px !important;
+  border-radius: 6px !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-module h3 {
+  margin-bottom: 4px !important;
+  padding-bottom: 4px !important;
+  font-size: 13px !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-module h3 span {
+  padding: 1px 5px !important;
+  font-size: 9.5px !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-row {
+  min-height: 24px !important;
+  margin-bottom: 3px !important;
+  padding: 2px 5px !important;
+  grid-template-columns: 60px minmax(0, 1fr) 39px !important;
+  gap: 4px !important;
+  border-radius: 5px !important;
+}
+
+.result-dialog.full-vote-dialog .rank-mark {
+  min-height: 19px !important;
+  padding: 0 4px !important;
+  font-size: 9.5px !important;
+}
+
+.result-dialog.full-vote-dialog .rank-title {
+  font-size: 11px !important;
+  line-height: 1.1 !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-row strong {
+  min-width: 36px !important;
+  font-size: 10.5px !important;
+  line-height: 1 !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-row strong small {
+  font-size: 9.5px !important;
+  line-height: 1 !important;
+}
+
+@media (max-width: 640px) {
+  .result-dialog.full-vote-dialog .result-dialog-grid {
+    max-height: calc(100vh - 86px) !important;
+  }
+
+  .result-dialog.full-vote-dialog .result-dialog-row {
+    min-height: 34px !important;
+    grid-template-columns: 74px minmax(0, 1fr) 50px !important;
+  }
+}
