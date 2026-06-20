@@ -1537,25 +1537,29 @@ function renderResultDialog() {
   }
   resultDialogGrid.innerHTML = modules.map(module => {
     const totalVotes = moduleVoteTotal(module.name);
-    const topEntries = moduleResultList(module.name).slice(0, resultLimitForModule(module.name));
-    const rows = topEntries.length
-      ? topEntries.map((entry, index) => `
-        <div class="result-dialog-row rank-${index + 1} award-row">
-          <span class="rank-mark">第 ${index + 1} 名 · 获奖</span>
+    const awardLimit = resultLimitForModule(module.name);
+    const allEntries = moduleResultList(module.name);
+    const rows = allEntries.length
+      ? allEntries.map((entry, index) => {
+        const rank = index + 1;
+        const isAward = index < awardLimit;
+        return `
+        <div class="result-dialog-row rank-${rank} ${isAward ? "award-row" : "normal-row"}">
+          <span class="rank-mark">第 ${rank} 名${isAward ? " · 获奖" : ""}</span>
           <span class="rank-title">${resultDisplayTitle(entry)}</span>
           <strong><span>${entry.votes} 票${tiebreakerText(entry)}</span><small>${votePercent(entry, totalVotes)}</small></strong>
         </div>
-      `).join("")
+      `;
+      }).join("")
       : `<div class="empty compact">暂无作品</div>`;
     return `
       <section class="result-dialog-module">
-        <h3>${module.name}<span>前 ${resultLimitForModule(module.name)} 名</span></h3>
+        <h3>${module.name}<span>全部 ${allEntries.length} 名 · 获奖 ${awardLimit} 名</span></h3>
         ${rows}
       </section>
     `;
   }).join("");
 }
-
 function openResultDialogIfNeeded(force = false) {
   if (!resultDialog) return;
   const hasResultEntries = results.some(entry => entry.votes > 0 || entry.tiebreakerVotes > 0);
