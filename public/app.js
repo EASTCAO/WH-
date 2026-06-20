@@ -1478,7 +1478,7 @@ function renderResults() {
         const awardRankClass = isAward && rank <= 3 ? ` result-rank-${rank}` : "";
         return `
           <div class="result-row${awardRankClass} ${isAward ? "award-row" : "normal-row"}">
-            <span><b>第 ${rank} 名${isAward ? " · 获奖" : ""}</b> ${resultDisplayTitle(entry)}</span>
+            <span><b>第${rank}名</b> ${resultDisplayTitle(entry)}</span>
             <strong><span>${entry.votes} 票${tiebreakerText(entry)}</span><small>${votePercent(entry, totalVotes)}</small></strong>
           </div>
         `;
@@ -1526,7 +1526,7 @@ function renderResultDialog() {
         const isAward = index < awardLimit;
         return `
         <div class="result-dialog-row rank-${rank} ${isAward ? "award-row" : "normal-row"}">
-          <span class="rank-mark">第 ${rank} 名${isAward ? " · 获奖" : ""}</span>
+          <span class="rank-mark">第${rank}名</span>
           <span class="rank-title">${resultDisplayTitle(entry)}</span>
           <strong><span>${entry.votes} 票${tiebreakerText(entry)}</span><small>${votePercent(entry, totalVotes)}</small></strong>
         </div>

@@ -10091,3 +10091,26 @@ body[data-theme="dark"] .result-module .tie-admin-row {
     max-height: calc(100vh - 54px) !important;
   }
 }
+
+/* Compact rank badges: keep first/second/third labels inside small cards. */
+.result-dialog.full-vote-dialog .rank-mark {
+  min-width: 48px !important;
+  max-width: 52px !important;
+  padding: 0 4px !important;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-row {
+  grid-template-columns: 54px minmax(0, 1fr) 39px !important;
+}
+
+.result-module.full-result-module .result-row b,
+.admin-results-preview .result-module.full-result-module .result-row b {
+  display: inline-block !important;
+  min-width: 42px !important;
+  margin-right: 4px !important;
+  white-space: nowrap !important;
+}
