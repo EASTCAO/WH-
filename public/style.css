@@ -9405,3 +9405,84 @@ body[data-theme="dark"] .top-actions .identity.is-logged-in #voterLogout {
     padding-top: 12px !important;
   }
 }
+
+/* Result dialog: show complete rankings without clipping. */
+.result-dialog {
+  width: min(1280px, calc(100vw - 28px)) !important;
+  max-height: calc(100vh - 24px) !important;
+}
+
+.result-dialog-shell {
+  max-height: calc(100vh - 24px) !important;
+}
+
+.result-dialog-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  align-items: start !important;
+  gap: 14px !important;
+  max-height: calc(100vh - 132px) !important;
+  overflow-y: auto !important;
+}
+
+.result-dialog-module {
+  min-height: 0 !important;
+  height: auto !important;
+  overflow: visible !important;
+  gap: 8px !important;
+  padding: 12px !important;
+}
+
+.result-dialog-module h3 {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--ui-line, #dfe3e8);
+  background: inherit;
+}
+
+.result-dialog-row {
+  min-height: 0 !important;
+  padding: 8px 10px !important;
+  gap: 8px !important;
+  grid-template-columns: 88px minmax(0, 1fr) 58px !important;
+}
+
+.result-dialog-row.rank-1 {
+  transform: none !important;
+}
+
+.result-dialog-row.normal-row .rank-mark {
+  border: 1px solid var(--ui-line, #dfe3e8);
+  background: #f7f7f4;
+  color: #475467;
+}
+
+.result-dialog-row strong {
+  font-size: 13px !important;
+}
+
+.result-dialog-row strong small {
+  font-size: 11px !important;
+}
+
+@media (max-width: 860px) {
+  .result-dialog-grid {
+    grid-template-columns: 1fr !important;
+    max-height: calc(100vh - 118px) !important;
+  }
+
+  .result-dialog-row {
+    grid-template-columns: 84px minmax(0, 1fr) 54px !important;
+  }
+}
+
+body[data-theme="dark"] .result-dialog-module h3 {
+  border-bottom-color: var(--ui-line, #333333) !important;
+}
+
+body[data-theme="dark"] .result-dialog-row.normal-row .rank-mark {
+  border-color: var(--ui-line, #333333) !important;
+  background: #2a2a28 !important;
+  color: var(--ui-text, #f5f5f0) !important;
+}
