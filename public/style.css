@@ -9566,3 +9566,75 @@ body[data-theme="dark"] .result-dialog-row.normal-row {
 body[data-theme="dark"] .full-result-module .result-row.normal-row b {
   color: var(--ui-text-soft, #b8b8b0) !important;
 }
+
+/* Full vote result dialog: stack modules so every entry is plainly visible. */
+.result-dialog.full-vote-dialog,
+.result-dialog {
+  width: min(1180px, calc(100vw - 24px)) !important;
+  max-height: calc(100vh - 20px) !important;
+}
+
+.result-dialog-shell {
+  max-height: calc(100vh - 20px) !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+}
+
+.result-dialog-grid {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 16px !important;
+  max-height: calc(100vh - 118px) !important;
+  overflow-y: auto !important;
+  padding: 16px !important;
+}
+
+.result-dialog-module {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 8px !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+.result-dialog-module h3 {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 12px !important;
+  margin-bottom: 2px !important;
+}
+
+.result-dialog-row {
+  width: 100% !important;
+  grid-template-columns: 108px minmax(0, 1fr) 72px !important;
+  padding: 9px 12px !important;
+}
+
+.result-dialog-row .rank-title {
+  white-space: normal !important;
+  line-height: 1.35 !important;
+}
+
+.result-dialog-row strong {
+  min-width: 58px !important;
+}
+
+@media (max-width: 640px) {
+  .result-dialog-grid {
+    max-height: calc(100vh - 104px) !important;
+    padding: 12px !important;
+  }
+
+  .result-dialog-row {
+    grid-template-columns: 88px minmax(0, 1fr) 54px !important;
+    gap: 8px !important;
+    padding: 8px !important;
+  }
+
+  .rank-mark {
+    font-size: 11px !important;
+    padding: 0 7px !important;
+  }
+}

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>作品评优投票</title>
-    <link rel="stylesheet" href="/style.css?v=20260620-full-vote-results">
+    <link rel="stylesheet" href="/style.css?v=20260620-full-vote-results-stack">
   </head>
   <body class="auth-locked">
     <section id="authScreen" class="auth-screen">
@@ -173,13 +173,13 @@
       </div>
     </dialog>
 
-    <dialog id="resultDialog" class="result-dialog">
+    <dialog id="resultDialog" class="result-dialog full-vote-dialog">
       <div class="result-dialog-shell">
         <header class="result-dialog-header">
           <div>
             <span class="phase-badge">结果已公布</span>
             <h2>完整投票结果</h2>
-            <p>所有作品按票数排序展示，获奖名次已高亮。</p>
+            <p>每个模块都会列出全部作品排名，可向下滚动查看。</p>
           </div>
           <button id="closeResultDialog" class="round-button" type="button" aria-label="关闭">×</button>
         </header>
@@ -235,6 +235,6 @@
     </dialog>
 
     <div id="appToast" class="app-toast" hidden></div>
-    <script src="/app.js?v=20260620-full-vote-results"></script>
+    <script src="/app.js?v=20260620-full-vote-results-stack"></script>
   </body>
 </html>
