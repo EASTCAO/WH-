@@ -9975,3 +9975,77 @@ body[data-theme="dark"] .result-module .tie-admin-row {
     grid-template-columns: 74px minmax(0, 1fr) 50px !important;
   }
 }
+
+/* Result page cards: allow 11-row modules to grow instead of spilling outside. */
+.results:has(.full-result-module),
+.admin-results-preview .results:has(.full-result-module) {
+  align-items: start !important;
+  grid-auto-rows: auto !important;
+}
+
+.result-module.full-result-module,
+.admin-results-preview .result-module.full-result-module {
+  display: block !important;
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  contain: none !important;
+  padding: 8px !important;
+}
+
+.result-module.full-result-module .result-full-list,
+.admin-results-preview .result-module.full-result-module .result-full-list {
+  display: grid !important;
+  grid-auto-rows: auto !important;
+  gap: 4px !important;
+  overflow: visible !important;
+}
+
+.result-module.full-result-module .result-row,
+.admin-results-preview .result-module.full-result-module .result-row {
+  position: static !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 40px !important;
+  align-items: center !important;
+  gap: 6px !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-height: 25px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 3px 6px !important;
+  overflow: visible !important;
+}
+
+.result-module.full-result-module .result-row > span,
+.admin-results-preview .result-module.full-result-module .result-row > span {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: 11px !important;
+  line-height: 1.15 !important;
+}
+
+.result-module.full-result-module .result-row b,
+.admin-results-preview .result-module.full-result-module .result-row b {
+  margin-right: 5px !important;
+}
+
+.result-module.full-result-module .result-row strong,
+.admin-results-preview .result-module.full-result-module .result-row strong {
+  min-width: 36px !important;
+  font-size: 10.5px !important;
+  line-height: 1 !important;
+}
+
+.result-module.full-result-module .result-row strong small,
+.admin-results-preview .result-module.full-result-module .result-row strong small {
+  font-size: 9.5px !important;
+  line-height: 1 !important;
+}
+
+.result-module.full-result-module h3,
+.admin-results-preview .result-module.full-result-module h3 {
+  margin-bottom: 6px !important;
+}
