@@ -9638,3 +9638,83 @@ body[data-theme="dark"] .full-result-module .result-row.normal-row b {
     padding: 0 7px !important;
   }
 }
+
+/* Final fix: complete result dialog rows must never overlap or collapse. */
+.result-dialog.full-vote-dialog .result-dialog-grid {
+  display: block !important;
+  max-height: calc(100vh - 118px) !important;
+  overflow-y: auto !important;
+  padding: 16px !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-module {
+  display: block !important;
+  width: 100% !important;
+  min-height: auto !important;
+  height: auto !important;
+  overflow: visible !important;
+  margin: 0 0 16px !important;
+  padding: 14px !important;
+  contain: none !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-module h3 {
+  position: static !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin: 0 0 12px !important;
+  padding: 0 0 10px !important;
+  border-bottom: 1px solid var(--ui-line, #dfe3e8) !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-row {
+  display: grid !important;
+  position: static !important;
+  transform: none !important;
+  animation: none !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-height: 54px !important;
+  margin: 0 0 8px !important;
+  padding: 10px 12px !important;
+  grid-template-columns: 112px minmax(0, 1fr) 76px !important;
+  align-items: center !important;
+  overflow: visible !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-row:last-child {
+  margin-bottom: 0 !important;
+}
+
+.result-dialog.full-vote-dialog .rank-mark {
+  min-height: 30px !important;
+}
+
+.result-dialog.full-vote-dialog .rank-title {
+  display: block !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: normal !important;
+  line-height: 1.35 !important;
+}
+
+.result-dialog.full-vote-dialog .result-dialog-row strong {
+  align-self: center !important;
+  min-width: 64px !important;
+}
+
+@media (max-width: 640px) {
+  .result-dialog.full-vote-dialog .result-dialog-grid {
+    max-height: calc(100vh - 104px) !important;
+    padding: 12px !important;
+  }
+
+  .result-dialog.full-vote-dialog .result-dialog-row {
+    min-height: 52px !important;
+    grid-template-columns: 88px minmax(0, 1fr) 54px !important;
+    gap: 8px !important;
+    padding: 8px !important;
+  }
+}
