@@ -348,7 +348,7 @@ function votePercent(entry, totalVotes) {
 }
 
 function tiebreakerText(entry) {
-  return entry.tiebreakerVotes ? ` · 加赛 ${entry.tiebreakerVotes} 票` : "";
+  return entry.tiebreakerVotes ? ` · 加${entry.tiebreakerVotes}` : "";
 }
 
 function resultTieGroups(moduleName) {
@@ -680,47 +680,93 @@ function renderVotingStatus() {
     if (votingStatusSummary) votingStatusSummary.innerHTML = "";
     return;
   }
-  const assignedModules = status.modules.filter(m => m.expected.length);
+
+  const stats = votingCompletionStats();
+  const summaryLabel = votingStatusAdmin.querySelector("summary");
+  if (summaryLabel) {
+    summaryLabel.innerHTML = stats.assigned.length
+      ? `投票进度 <span>${stats.pendingPeople ? `未投 ${stats.pendingPeople} 人` : "已完成"}</span>`
+      : `投票进度 <span>未配置</span>`;
+  }
+
   if (votingStatusSummary) {
-    if (!assignedModules.length) {
+    if (!stats.assigned.length) {
       votingStatusSummary.className = "voting-status-summary";
-      votingStatusSummary.innerHTML = `还没有为任何模块设置应投名单，请先到「投票名单分组」里配置。`;
-    } else if (status.allDone) {
+      votingStatusSummary.innerHTML = `
+        <strong>未配置投票名单</strong>
+        <span>先到「投票名单分组」选择每个模块需要投票的人。</span>
+      `;
+    } else if (!stats.pendingPeople) {
       votingStatusSummary.className = "voting-status-summary done";
-      votingStatusSummary.innerHTML = `✅ 所有应投人员已完成投票`;
+      votingStatusSummary.innerHTML = `
+        <strong>全部完成</strong>
+        <span>${stats.totalVoted} / ${stats.totalExpected} 人次已投，可以公布结果。</span>
+      `;
     } else {
-      const remainingPeople = assignedModules.reduce((sum, m) => sum + m.notVoted.length, 0);
-      const remainingModules = assignedModules.filter(m => m.notVoted.length).length;
       votingStatusSummary.className = "voting-status-summary pending";
-      votingStatusSummary.innerHTML = `还差 ${remainingModules} 个模块、共 ${remainingPeople} 人未投`;
+      votingStatusSummary.innerHTML = `
+        <strong>未投 ${stats.pendingPeople} 人</strong>
+        <span>${stats.pendingModules.length} 个模块还没投完，已投 ${stats.totalVoted} / ${stats.totalExpected} 人次。</span>
+      `;
     }
   }
   votingStatusList.innerHTML = status.modules.map(module => {
-    if (!module.expected.length) {
+    const expected = module.expected || [];
+    const voted = module.voted || [];
+    const notVoted = module.notVoted || [];
+    const extra = module.extra || [];
+    if (!expected.length) {
       return `
         <div class="voting-status-row empty-assign">
-          <div class="voting-status-head"><strong>${escapeHtml(module.name)}</strong><span class="muted">未设置应投名单</span></div>
+          <div class="voting-status-head"><strong>${escapeHtml(module.name)}</strong><span class="count">未配置</span></div>
         </div>
       `;
     }
-    const done = module.notVoted.length === 0;
-    const notVoted = module.notVoted.length
-      ? `<div class="not-voted">未投：${module.notVoted.map(escapeHtml).join("、")}</div>`
-      : `<div class="all-voted">全部已投 ✅</div>`;
-    const extra = module.extra.length
-      ? `<div class="extra-voted">名单外投票：${module.extra.map(escapeHtml).join("、")}</div>`
+    const done = notVoted.length === 0;
+    const percent = Math.round((voted.length / expected.length) * 100);
+    const names = notVoted.length
+      ? `<div class="not-voted"><span>未投</span>${notVoted.map(name => `<b>${escapeHtml(name)}</b>`).join("")}</div>`
+      : `<div class="all-voted">全部已投</div>`;
+    const extraVotes = extra.length
+      ? `<div class="extra-voted">名单外：${extra.map(escapeHtml).join("、")}</div>`
       : "";
     return `
       <div class="voting-status-row${done ? " done" : ""}">
         <div class="voting-status-head">
           <strong>${escapeHtml(module.name)}</strong>
-          <span class="count">已投 ${module.voted.length} / 应投 ${module.expected.length}</span>
+          <span class="count">${voted.length}/${expected.length}</span>
         </div>
-        ${notVoted}
-        ${extra}
+        <div class="voting-status-meter" aria-label="${escapeHtml(module.name)} 已投 ${percent}%">
+          <i style="width:${percent}%"></i>
+        </div>
+        ${names}
+        ${extraVotes}
       </div>
     `;
   }).join("");
+}
+
+function votingCompletionStats() {
+  const modules = votingStatus?.modules || [];
+  const assigned = modules.filter(module => (module.expected || []).length);
+  const totalExpected = assigned.reduce((sum, module) => sum + (module.expected || []).length, 0);
+  const totalVoted = assigned.reduce((sum, module) => sum + (module.voted || []).length, 0);
+  const pendingModules = assigned.filter(module => (module.notVoted || []).length);
+  const pendingPeople = pendingModules.reduce((sum, module) => sum + (module.notVoted || []).length, 0);
+  return { assigned, totalExpected, totalVoted, pendingModules, pendingPeople, allDone: Boolean(votingStatus?.allDone) };
+}
+
+function votingPendingMessage(limitPerModule = 6) {
+  const stats = votingCompletionStats();
+  if (!stats.assigned.length) return "还没有设置应投名单，请先在投票名单分组里配置。";
+  if (!stats.pendingPeople) return "全部应投人员已完成投票。";
+  const lines = stats.pendingModules.map(module => {
+    const notVoted = module.notVoted || [];
+    const names = notVoted.slice(0, limitPerModule).join("、");
+    const more = notVoted.length > limitPerModule ? " 等" + notVoted.length + "人" : "";
+    return module.name + "：" + names + more;
+  });
+  return "还有 " + stats.pendingModules.length + " 个模块、共 " + stats.pendingPeople + " 人未投完：\n" + lines.join("\n");
 }
 
 async function toggleModuleVoter(moduleName, name) {
@@ -1358,40 +1404,53 @@ function renderTiebreakers() {
 
   tiebreakerList.innerHTML = visible.map(item => {
     const picked = tiebreakerSelected.get(item.id) || item.myEntryId || "";
+    const submittedEntryId = item.myEntryId || "";
     const blockedByOwnEntry = !adminMode && item.entries.some(entry => entry.isOwn);
+    const pickedEntry = item.entries.find(entry => entry.id === picked);
+    const submitLabel = !pickedEntry
+      ? "先选 1 个作品"
+      : (picked === submittedEntryId ? `已确认：${entryTitle(pickedEntry)}` : `确认选择：${entryTitle(pickedEntry)}`);
     return `
-      <article class="tiebreaker-card${blockedByOwnEntry ? " blocked" : ""}" data-tiebreaker="${item.id}">
+      <article class="tiebreaker-card${blockedByOwnEntry ? " blocked" : ""}${submittedEntryId ? " voted" : ""}" data-tiebreaker="${item.id}">
         <div class="tiebreaker-head">
           <div>
-            <strong>${escapeHtml(item.moduleName)} 并列加赛</strong>
-            <span>${blockedByOwnEntry ? "你有作品在本组加赛中，不能参与本组投票" : `${item.entries.length} 个同票作品 · 每人选 1 个`}</span>
+            <strong>${escapeHtml(item.moduleName)} 并列重投</strong>
+            <span>${blockedByOwnEntry ? "你有作品在这组并列里，本组不用投" : `${item.entries.length} 个同票作品，选 1 个`}</span>
           </div>
-          ${adminMode ? `<button class="close-tiebreaker" type="button">结束加赛</button>` : ""}
+          ${adminMode ? `<button class="close-tiebreaker" type="button">结束重投</button>` : ""}
         </div>
         <div class="tiebreaker-options">
           ${item.entries.map(entry => {
             const checked = picked === entry.id;
+            const submitted = submittedEntryId === entry.id;
             const disabled = blockedByOwnEntry || Boolean(entry.isOwn);
             return `
-              <button class="tiebreaker-option${checked ? " selected" : ""}${disabled ? " disabled" : ""}" type="button" data-entry="${entry.id}" ${disabled ? "disabled" : ""}>
+              <div class="tiebreaker-option${checked ? " selected" : ""}${submitted ? " submitted" : ""}${disabled ? " disabled" : ""}" role="button" tabindex="${disabled ? "-1" : "0"}" data-entry="${entry.id}" aria-disabled="${disabled ? "true" : "false"}" aria-pressed="${checked ? "true" : "false"}">
+                <b>${checked ? (submitted ? "已确认" : "已选") : "选择"}</b>
                 <span>${entryTitle(entry)}</span>
-                <small>${adminMode ? `${escapeHtml(entry.photographer || "")} · ` : ""}原票 ${entry.votes || 0} · 加赛 ${entry.tiebreakerVotes || 0}</small>
-              </button>
+                <small>${adminMode ? `${escapeHtml(entry.photographer || "")} · ` : ""}原票 ${entry.votes || 0} · 重投 ${entry.tiebreakerVotes || 0}</small>
+              </div>
             `;
           }).join("")}
         </div>
-        ${!adminMode ? `<button class="submit-tiebreaker" type="button" ${picked && !blockedByOwnEntry ? "" : "disabled"}>${blockedByOwnEntry ? "本组不可投票" : "提交加赛投票"}</button>` : ""}
+        ${!adminMode ? `<button class="submit-tiebreaker${picked && picked === submittedEntryId ? " is-confirmed" : ""}" type="button" ${picked && !blockedByOwnEntry ? "" : "disabled"}>${blockedByOwnEntry ? "本组无需操作" : submitLabel}</button>` : ""}
       </article>
     `;
   }).join("");
 
   tiebreakerList.querySelectorAll(".tiebreaker-card").forEach(card => {
     const tiebreakerId = card.dataset.tiebreaker;
-    card.querySelectorAll(".tiebreaker-option").forEach(button => {
-      button.addEventListener("click", () => {
-        if (adminMode || button.disabled) return;
-        tiebreakerSelected.set(tiebreakerId, button.dataset.entry);
+    card.querySelectorAll(".tiebreaker-option").forEach(option => {
+      const pick = () => {
+        if (adminMode || option.classList.contains("disabled")) return;
+        tiebreakerSelected.set(tiebreakerId, option.dataset.entry);
         renderTiebreakers();
+      };
+      option.addEventListener("click", pick);
+      option.addEventListener("keydown", event => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        pick();
       });
     });
     card.querySelector(".submit-tiebreaker")?.addEventListener("click", () => submitTiebreakerVote(tiebreakerId));
@@ -1408,7 +1467,7 @@ async function createTiebreaker(moduleName, entryIds) {
       body: JSON.stringify({ adminCode: adminCode.value.trim(), action: "create", moduleName, entryIds })
     });
     await loadData();
-    showToast("已发起并列加赛", "success");
+    showToast("已让并列作品重新投票", "success");
   } catch (error) {
     alert(error.message);
   }
@@ -1423,7 +1482,7 @@ async function closeTiebreaker(tiebreakerId) {
       body: JSON.stringify({ adminCode: adminCode.value.trim(), action: "close", tiebreakerId })
     });
     await loadData();
-    showToast("已结束加赛", "success");
+    showToast("已结束重投", "success");
   } catch (error) {
     alert(error.message);
   }
@@ -1439,7 +1498,9 @@ async function submitTiebreakerVote(tiebreakerId) {
       body: JSON.stringify({ voter: voterName(), tiebreakerId, entryId })
     });
     await loadData();
-    showToast("加赛投票已提交，排名会自动更新", "success");
+    tiebreakerSelected.set(tiebreakerId, entryId);
+    renderTiebreakers();
+    showToast("已确认选择，排名会自动更新", "success");
   } catch (error) {
     alert(error.message);
   }
@@ -1492,7 +1553,7 @@ function renderResults() {
           <div class="tie-admin-row">
             <span>${group[0].votes} 票并列：${group.map(resultDisplayTitle).join("、")}</span>
             <button class="create-tiebreaker" type="button" data-module="${escapeHtml(module.name)}" data-entry-ids="${escapeHtml(ids.join(","))}" ${open ? "disabled" : ""}>
-              ${open ? "加赛进行中" : "发起加赛"}
+              ${open ? "重投中" : "重新投票"}
             </button>
           </div>
         `;
@@ -2399,6 +2460,10 @@ publishToggle.addEventListener("click", async () => {
   if (!adminMode) return;
   if (!(await ensureSelectedPeriodActive())) return;
   const next = !resultsPublished;
+  if (next) {
+    const stats = votingCompletionStats();
+    if (stats.assigned.length && stats.pendingPeople && !confirm(votingPendingMessage())) return;
+  }
   try {
     await fetchJson("/api/status", {
       method: "POST",
