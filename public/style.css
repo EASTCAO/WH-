@@ -10972,3 +10972,57 @@ body[data-theme="dark"] .entry-card.selected .vote-check::after {
     font-size: 14px !important;
   }
 }
+
+
+/* Final force full module card names. */
+.module-card,
+.layout-side .module-card,
+.layout-main .module-card,
+body:not(.is-admin) .layout-main .module-card,
+body.is-admin .layout-main .module-card {
+  min-height: 64px !important;
+  height: auto !important;
+  align-items: center !important;
+  grid-template-columns: 28px minmax(0, 1fr) !important;
+  row-gap: 4px !important;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}
+
+.module-card .module-main,
+.module-card .module-heading,
+.module-card .module-copy {
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+.module-card .module-name,
+.layout-side .module-card .module-name,
+.layout-main .module-card .module-name,
+body:not(.is-admin) .layout-main .module-name,
+body.is-admin .layout-main .module-name {
+  display: block !important;
+  max-width: none !important;
+  width: 100% !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: normal !important;
+  word-break: keep-all !important;
+  overflow-wrap: anywhere !important;
+  line-height: 1.2 !important;
+}
+
+.module-card .module-status,
+.layout-side .module-card .module-status,
+.layout-main .module-card .module-status {
+  display: block !important;
+  margin-top: 2px !important;
+  white-space: nowrap !important;
+}
+
+.module-card .module-stats,
+.module-card .module-progress,
+.module-card .module-drop-text,
+.module-card .module-uploaded {
+  display: none !important;
+}
