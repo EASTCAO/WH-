@@ -9313,8 +9313,9 @@ body:not(.is-admin) .photographer-result-card[hidden] {
 }
 
 .entry-card.own-entry {
-  border-color: rgba(29, 111, 97, 0.28) !important;
-  background: #f7fbf9 !important;
+  border-color: rgba(29, 111, 97, 0.48) !important;
+  background: linear-gradient(135deg, #f3fbf7 0%, #ffffff 58%) !important;
+  box-shadow: inset 4px 0 0 #1d6f61, 0 12px 30px rgba(29, 111, 97, 0.08) !important;
 }
 
 .entry-card.own-entry .entry-title::after {
@@ -9323,13 +9324,42 @@ body:not(.is-admin) .photographer-result-card[hidden] {
   align-items: center;
   margin-left: 8px;
   padding: 2px 8px;
-  border: 1px solid rgba(29, 111, 97, 0.26);
+  border: 1px solid rgba(29, 111, 97, 0.42);
   border-radius: 999px;
-  color: #1d6f61;
-  background: rgba(29, 111, 97, 0.08);
+  color: #0f5f51;
+  background: #e6f6ef;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 850;
   vertical-align: middle;
+}
+
+.entry-card.own-entry .folder-icon {
+  border-color: rgba(29, 111, 97, 0.45) !important;
+  background: #eaf8f1 !important;
+  color: #1d6f61 !important;
+}
+
+.entry-card.own-entry .folder-icon::after {
+  content: "MY";
+  position: absolute;
+  left: auto;
+  right: -7px;
+  top: -9px;
+  bottom: auto;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  min-width: 25px;
+  height: 18px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 999px;
+  background: #1d6f61;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 6px 14px rgba(29, 111, 97, 0.2);
 }
 
 .entry-card.vote-locked:not(.own-entry) {
@@ -9344,14 +9374,26 @@ body[data-theme="dark"] .entry-card.disabled .vote-check:disabled {
 }
 
 body[data-theme="dark"] .entry-card.own-entry {
-  border-color: rgba(143, 197, 178, 0.32) !important;
-  background: #16201c !important;
+  border-color: rgba(143, 197, 178, 0.56) !important;
+  background: linear-gradient(135deg, #17241f 0%, #111111 62%) !important;
+  box-shadow: inset 4px 0 0 #8fc5b2, 0 12px 30px rgba(0, 0, 0, 0.28) !important;
 }
 
 body[data-theme="dark"] .entry-card.own-entry .entry-title::after {
-  border-color: rgba(143, 197, 178, 0.32);
+  border-color: rgba(143, 197, 178, 0.46);
   color: #8fc5b2;
-  background: rgba(143, 197, 178, 0.12);
+  background: rgba(143, 197, 178, 0.16);
+}
+
+body[data-theme="dark"] .entry-card.own-entry .folder-icon {
+  border-color: rgba(143, 197, 178, 0.48) !important;
+  background: #1b2a25 !important;
+  color: #8fc5b2 !important;
+}
+
+body[data-theme="dark"] .entry-card.own-entry .folder-icon::after {
+  background: #8fc5b2;
+  color: #101614;
 }
 
 /* Keep photographer name and logout as one consistent header control group. */
