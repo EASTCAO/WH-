@@ -9312,9 +9312,28 @@ body:not(.is-admin) .photographer-result-card[hidden] {
   cursor: not-allowed;
 }
 
-.entry-card.disabled .entry-hint::after {
-  content: " · 自己作品不可投";
-  color: #98a2b3;
+.entry-card.own-entry {
+  border-color: rgba(29, 111, 97, 0.28) !important;
+  background: #f7fbf9 !important;
+}
+
+.entry-card.own-entry .entry-title::after {
+  content: "我的作品";
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border: 1px solid rgba(29, 111, 97, 0.26);
+  border-radius: 999px;
+  color: #1d6f61;
+  background: rgba(29, 111, 97, 0.08);
+  font-size: 12px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.entry-card.vote-locked:not(.own-entry) {
+  opacity: 0.86;
 }
 
 body[data-theme="dark"] .entry-card.disabled .vote-check,
@@ -9322,6 +9341,17 @@ body[data-theme="dark"] .entry-card.disabled .vote-check:disabled {
   border-color: var(--ui-line) !important;
   background: #171717 !important;
   color: var(--ui-text-soft) !important;
+}
+
+body[data-theme="dark"] .entry-card.own-entry {
+  border-color: rgba(143, 197, 178, 0.32) !important;
+  background: #16201c !important;
+}
+
+body[data-theme="dark"] .entry-card.own-entry .entry-title::after {
+  border-color: rgba(143, 197, 178, 0.32);
+  color: #8fc5b2;
+  background: rgba(143, 197, 178, 0.12);
 }
 
 /* Keep photographer name and logout as one consistent header control group. */

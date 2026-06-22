@@ -285,7 +285,20 @@ function hasVotableEntries(moduleName) {
 function myUploadedEntries(moduleName) {
   const voter = voterName();
   if (!voter) return [];
-  return moduleEntries(moduleName).filter(entry => entry.isOwn || entry.photographer === voter);
+  return moduleEntries(moduleName).filter(entry => isOwnEntry(entry));
+}
+
+function isOwnEntry(entry) {
+  return Boolean(entry?.isOwn);
+}
+
+function mediaSrc(item) {
+  return item?.src || item?.fallbackSrc || "";
+}
+
+function mediaFallbackSrc(item) {
+  if (!item?.fallbackSrc || item.fallbackSrc === item.src) return "";
+  return item.fallbackSrc;
 }
 
 function isModuleCompleted(moduleName) {
@@ -1292,13 +1305,18 @@ function renderGallery() {
 
   for (const entry of list) {
     const node = entryTemplate.content.firstElementChild.cloneNode(true);
-    const isOwn = Boolean(entry.isOwn || (voter && entry.photographer === voter));
+    const isOwn = isOwnEntry(entry);
     const activeCompleted = isModuleCompleted(activeModule.name);
     const isSelected = activeBucket().has(entry.id);
     node.classList.toggle("selected", isSelected);
+    node.classList.toggle("own-entry", isOwn);
+    node.classList.toggle("vote-locked", activeCompleted);
     node.classList.toggle("disabled", Boolean(isOwn || activeCompleted));
     node.querySelector(".entry-title").textContent = entryTitle(entry);
     node.querySelector(".entry-meta").textContent = entryMeta(entry);
+    node.querySelector(".entry-hint").textContent = isOwn
+      ? "我的作品，仅可查看"
+      : (activeCompleted ? "已提交，不能修改" : "点击查看全部图片");
     node.querySelector(".vote-check").disabled = !voter || Boolean(isOwn) || activeCompleted;
     node.querySelector(".vote-check").title = !voter
       ? "请先登录自己的姓名"
@@ -1334,7 +1352,7 @@ function renderPreviewContent() {
     <button class="media-preview-card${item.processing ? " processing" : ""}" type="button" data-index="${index}">
       ${item.kind === "video"
         ? `<span class="video-preview-placeholder" aria-hidden="true"><span class="video-play-icon">▶</span></span><span class="media-kind-badge">视频</span><span class="media-play-badge">点击播放</span>`
-        : `<img src="${item.src}" data-fallback-src="${item.fallbackSrc || ""}" loading="lazy" alt="${entryTitle(previewEntry)} 第 ${index + 1} 张">`}
+        : `<img src="${mediaSrc(item)}" data-fallback-src="${mediaFallbackSrc(item)}" loading="lazy" alt="${entryTitle(previewEntry)} 第 ${index + 1} 张">`}
       ${item.processing ? `<span class="media-processing">处理中</span>` : ""}
       <span class="media-error" hidden>加载失败，点击打开原文件</span>
     </button>
@@ -1363,7 +1381,7 @@ function renderPreviewContent() {
     button.addEventListener("click", () => {
       if (button.classList.contains("is-error")) {
         const item = previewEntry?.media?.[Number(button.dataset.index)];
-        if (item?.src) window.open(item.src, "_blank", "noopener");
+        if (mediaSrc(item)) window.open(mediaSrc(item), "_blank", "noopener");
         return;
       }
       openImageViewer(Number(button.dataset.index));
@@ -1396,14 +1414,20 @@ function renderImageViewer() {
   stopEmbeddedMedia(viewerStage);
   viewerTitle.textContent = entryTitle(previewEntry);
   viewerMeta.textContent = `${entryMeta(previewEntry)} · ${viewerIndex + 1}/${previewEntry.media.length}`;
+  const src = mediaSrc(item);
+  const fallbackSrc = mediaFallbackSrc(item);
   viewerStage.innerHTML = item.kind === "video"
-    ? `<video class="viewer-media" src="${item.src}" controls autoplay playsinline preload="metadata"></video>`
-    : `<img class="viewer-media" src="${item.src}" alt="${entryTitle(previewEntry)} 第 ${viewerIndex + 1} 张">`;
+    ? `<video class="viewer-media" src="${src}" controls autoplay playsinline preload="metadata"></video>`
+    : `<img class="viewer-media" src="${src}" data-fallback-src="${fallbackSrc}" alt="${entryTitle(previewEntry)} 第 ${viewerIndex + 1} 张">`;
   const media = viewerMedia();
   media?.addEventListener("error", () => {
+    if (media.dataset.fallbackSrc && media.src !== new URL(media.dataset.fallbackSrc, window.location.href).toString()) {
+      media.src = media.dataset.fallbackSrc;
+      return;
+    }
     viewerStage.classList.add("is-error");
     if (!viewerStage.querySelector(".viewer-load-error")) {
-      viewerStage.insertAdjacentHTML("beforeend", `<div class="viewer-load-error">文件加载失败，可以<a href="${item.src}" target="_blank" rel="noopener">点击这里打开原文件</a>。</div>`);
+      viewerStage.insertAdjacentHTML("beforeend", `<div class="viewer-load-error">文件加载失败，可以<a href="${src}" target="_blank" rel="noopener">点击这里打开原文件</a>。</div>`);
     }
   });
   media?.addEventListener("loadeddata", () => viewerStage.classList.remove("is-error"));
@@ -1748,7 +1772,7 @@ function toggleEntry(entry) {
     alert("本模块已经提交，不能修改投票结果");
     return;
   }
-  if (entry.isOwn || (entry.photographer && entry.photographer === voter)) {
+  if (isOwnEntry(entry)) {
     alert("不能投自己的作品");
     return;
   }
