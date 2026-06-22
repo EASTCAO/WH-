@@ -1863,8 +1863,6 @@ async function handleVote(req, res) {
     return sendJson(res, 400, { error: `${module.name} 需要选择 1 到 ${module.voteLimit} 个作品` });
   }
   if (new Set(entryIds).size !== entryIds.length) return sendJson(res, 400, { error: "不能重复投同一个作品" });
-  const existingBallot = currentBallots(db).find(ballot => ballot.voter === voter && ballot.moduleName === module.name);
-  if (existingBallot) return sendJson(res, 400, { error: "本模块已经提交，不能修改投票结果" });
 
     const periodEntries = currentEntries(db);
     const entries = entryIds.map(id => periodEntries.find(entry => entry.id === id));

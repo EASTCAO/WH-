@@ -305,6 +305,10 @@ function isModuleCompleted(moduleName) {
   return completedModules.has(moduleName);
 }
 
+function isModuleLocked(moduleName) {
+  return isModuleCompleted(moduleName) && !votingOpen;
+}
+
 function nextPendingModule(fromModuleName) {
   const startIndex = Math.max(0, modules.findIndex(module => module.name === fromModuleName));
   const orderedModules = modules.slice(startIndex + 1).concat(modules.slice(0, startIndex + 1));
@@ -1162,11 +1166,11 @@ function renderStatusControls() {
     downloadArchive.textContent = "\u4e0b\u8f7d\u5f52\u6863";
   }
   if (clearCurrentPeriod) clearCurrentPeriod.hidden = !adminMode;
-  submitVote.disabled = !votingOpen || !voterName() || isSubmittingVote || activeCompleted;
+  submitVote.disabled = !votingOpen || !voterName() || isSubmittingVote;
   submitVote.classList.toggle("is-loading", isSubmittingVote);
   submitVote.textContent = isSubmittingVote
     ? "提交中..."
-    : activeCompleted ? "投票已完成" : "提交本模块投票";
+    : activeCompleted ? (votingOpen ? "更新本模块投票" : "投票已完成") : "提交本模块投票";
   renderAdminVoteReady();
 }
 
@@ -1208,7 +1212,7 @@ function renderModules() {
     const completed = isModuleCompleted(module.name);
     const empty = count === 0;
     const started = picked > 0 && !completed;
-    const statusText = empty ? "无作品" : completed ? "已完成" : started ? `已选 ${picked}/${module.voteLimit}` : "待投票";
+    const statusText = empty ? "无作品" : completed ? (votingOpen ? "可修改" : "已完成") : started ? `已选 ${picked}/${module.voteLimit}` : "待投票";
     const statusClass = empty ? " empty" : completed ? " done" : started ? " started" : " pending";
     const activeClass = module.name === activeModule.name ? " active" : "";
     const completedClass = completed ? " completed" : "";
@@ -1307,20 +1311,21 @@ function renderGallery() {
     const node = entryTemplate.content.firstElementChild.cloneNode(true);
     const isOwn = isOwnEntry(entry);
     const activeCompleted = isModuleCompleted(activeModule.name);
+    const activeLocked = isModuleLocked(activeModule.name);
     const isSelected = activeBucket().has(entry.id);
     node.classList.toggle("selected", isSelected);
     node.classList.toggle("own-entry", isOwn);
-    node.classList.toggle("vote-locked", activeCompleted);
-    node.classList.toggle("disabled", Boolean(isOwn || activeCompleted));
+    node.classList.toggle("vote-locked", activeLocked);
+    node.classList.toggle("disabled", Boolean(isOwn || activeLocked));
     node.querySelector(".entry-title").textContent = entryTitle(entry);
     node.querySelector(".entry-meta").textContent = entryMeta(entry);
     node.querySelector(".entry-hint").textContent = isOwn
       ? "我的作品，仅可查看"
-      : (activeCompleted ? "点击查看全部图片" : "点击查看全部图片");
-    node.querySelector(".vote-check").disabled = !voter || Boolean(isOwn) || activeCompleted;
+      : "点击查看全部图片";
+    node.querySelector(".vote-check").disabled = !voter || Boolean(isOwn) || activeLocked;
     node.querySelector(".vote-check").title = !voter
       ? "请先登录自己的姓名"
-      : (activeCompleted ? "投票已完成" : (isOwn ? "不能投自己的作品" : "选择整套作品"));
+      : (activeLocked ? "投票已完成" : (isOwn ? "不能投自己的作品" : "选择整套作品"));
     node.querySelector(".vote-check").addEventListener("click", event => {
       event.stopPropagation();
       toggleEntry(entry);
@@ -1768,8 +1773,8 @@ function toggleEntry(entry) {
     voterInput.focus();
     return;
   }
-  if (isModuleCompleted(activeModule.name)) {
-    alert("本模块已经提交，不能修改投票结果");
+  if (isModuleLocked(activeModule.name)) {
+    alert("投票已关闭，不能修改投票结果");
     return;
   }
   if (isOwnEntry(entry)) {
@@ -2342,8 +2347,8 @@ async function submitCurrentVote() {
     alert("请至少选择 1 个作品文件夹");
     return;
   }
-  if (isModuleCompleted(submittedModuleName)) {
-    alert("本模块已经提交，不能修改投票结果");
+  if (isModuleLocked(submittedModuleName)) {
+    alert("投票已关闭，不能修改投票结果");
     return;
   }
   if (isSubmittingVote) return;
