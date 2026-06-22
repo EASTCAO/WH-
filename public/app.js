@@ -33,6 +33,7 @@ let toastTimer = null;
 let ballots = [];
 let adminBallots = [];
 const tiebreakerSelected = new Map();
+const tiebreakerSubmitted = new Map();
 let completedModules = new Set();
 let isSubmittingVote = false;
 let resultDialogDismissed = false;
@@ -459,7 +460,8 @@ async function loadData() {
   tiebreakers = Array.isArray(tiebreakerData.tiebreakers) ? tiebreakerData.tiebreakers : [];
   tiebreakerSelected.clear();
   for (const item of tiebreakers) {
-    if (item.myEntryId) tiebreakerSelected.set(item.id, item.myEntryId);
+    if (item.myEntryId && !tiebreakerSelected.has(item.id)) tiebreakerSelected.set(item.id, item.myEntryId);
+    if (item.myEntryId) tiebreakerSubmitted.set(item.id, item.myEntryId);
   }
   await loadBallots();
   await loadAdminBallots();
@@ -1404,7 +1406,7 @@ function renderTiebreakers() {
 
   tiebreakerList.innerHTML = visible.map(item => {
     const picked = tiebreakerSelected.get(item.id) || item.myEntryId || "";
-    const submittedEntryId = item.myEntryId || "";
+    const submittedEntryId = tiebreakerSubmitted.get(item.id) || item.myEntryId || "";
     const blockedByOwnEntry = !adminMode && item.entries.some(entry => entry.isOwn);
     const pickedEntry = item.entries.find(entry => entry.id === picked);
     const submitLabel = !pickedEntry
@@ -1440,11 +1442,13 @@ function renderTiebreakers() {
 
   tiebreakerList.querySelectorAll(".tiebreaker-card").forEach(card => {
     const tiebreakerId = card.dataset.tiebreaker;
+    const item = visible.find(row => row.id === tiebreakerId);
+    if (!item) return;
     card.querySelectorAll(".tiebreaker-option").forEach(option => {
       const pick = () => {
         if (adminMode || option.classList.contains("disabled")) return;
         tiebreakerSelected.set(tiebreakerId, option.dataset.entry);
-        renderTiebreakers();
+        updateTiebreakerCardSelection(card, item);
       };
       option.addEventListener("click", pick);
       option.addEventListener("keydown", event => {
@@ -1453,9 +1457,32 @@ function renderTiebreakers() {
         pick();
       });
     });
-    card.querySelector(".submit-tiebreaker")?.addEventListener("click", () => submitTiebreakerVote(tiebreakerId));
+    card.querySelector(".submit-tiebreaker")?.addEventListener("click", () => submitTiebreakerVote(tiebreakerId, card));
     card.querySelector(".close-tiebreaker")?.addEventListener("click", () => closeTiebreaker(tiebreakerId));
   });
+}
+
+function updateTiebreakerCardSelection(card, item) {
+  const picked = tiebreakerSelected.get(item.id) || item.myEntryId || "";
+  const submittedEntryId = tiebreakerSubmitted.get(item.id) || item.myEntryId || "";
+  const pickedEntry = item.entries.find(entry => entry.id === picked);
+  card.classList.toggle("voted", Boolean(submittedEntryId));
+  card.querySelectorAll(".tiebreaker-option").forEach(option => {
+    const checked = option.dataset.entry === picked;
+    const submitted = option.dataset.entry === submittedEntryId;
+    option.classList.toggle("selected", checked);
+    option.classList.toggle("submitted", submitted);
+    option.setAttribute("aria-pressed", checked ? "true" : "false");
+    const label = option.querySelector("b");
+    if (label) label.textContent = checked ? (submitted ? "已确认" : "已选") : "选择";
+  });
+  const submitButton = card.querySelector(".submit-tiebreaker");
+  if (!submitButton) return;
+  submitButton.disabled = !picked;
+  submitButton.classList.toggle("is-confirmed", Boolean(picked && picked === submittedEntryId));
+  submitButton.textContent = !pickedEntry
+    ? "先选 1 个作品"
+    : (picked === submittedEntryId ? `已确认：${entryTitle(pickedEntry)}` : `确认选择：${entryTitle(pickedEntry)}`);
 }
 
 async function createTiebreaker(moduleName, entryIds) {
@@ -1488,20 +1515,32 @@ async function closeTiebreaker(tiebreakerId) {
   }
 }
 
-async function submitTiebreakerVote(tiebreakerId) {
+async function submitTiebreakerVote(tiebreakerId, card) {
   const entryId = tiebreakerSelected.get(tiebreakerId);
   if (!entryId) return;
+  const submitButton = card?.querySelector(".submit-tiebreaker");
+  const originalText = submitButton?.textContent || "";
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = "提交中...";
+  }
   try {
     await fetchJson("/api/tiebreaker-vote", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ voter: voterName(), tiebreakerId, entryId })
     });
-    await loadData();
+    tiebreakerSubmitted.set(tiebreakerId, entryId);
     tiebreakerSelected.set(tiebreakerId, entryId);
-    renderTiebreakers();
+    const item = tiebreakers.find(row => row.id === tiebreakerId);
+    if (card && item) updateTiebreakerCardSelection(card, item);
     showToast("已确认选择，排名会自动更新", "success");
+    await loadData();
   } catch (error) {
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = originalText;
+    }
     alert(error.message);
   }
 }
