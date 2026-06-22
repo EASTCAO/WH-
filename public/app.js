@@ -1106,6 +1106,15 @@ function renderWelcome() {
   }
   if (adminMode) {
     const periodLabel = currentPeriodName || currentPeriodId || "当前评优";
+    const stats = votingCompletionStats();
+    const adminVoteDone = votingOpen && stats.assigned.length && !stats.pendingPeople;
+    if (adminVoteDone) {
+      phaseBadge.textContent = resultsPublished ? "结果已公布" : "投票已完成";
+      welcomeTitle.textContent = resultsPublished ? "结果已公布" : "投票已完成";
+    } else {
+      phaseBadge.textContent = votingOpen ? "投票进行中" : "作品上传阶段";
+      welcomeTitle.textContent = votingOpen ? "评审开始" : "作品准备中";
+    }
     welcomeText.innerHTML = `
       <span>${escapeHtml(periodLabel)}</span>
       <span>${totalWorks} 套作品</span>
