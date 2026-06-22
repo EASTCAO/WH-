@@ -1493,8 +1493,6 @@ function changeViewerZoom(delta) {
 }
 
 async function deleteEntry(entry) {
-  const label = entryTitle(entry);
-  if (!confirm(`确定删除 ${label} 吗？删除后该作品和相关票数都会移除。`)) return;
   try {
     await fetchJson("/api/delete-entry", {
       method: "POST",
@@ -2434,8 +2432,6 @@ async function deletePeriod(periodId) {
     alert("至少需要保留一个评优月份");
     return;
   }
-  if (!confirm(`确定删除 ${label} 吗？该月份的作品、投票和加赛记录都会删除。`)) return;
-
   try {
     await fetchJson("/api/periods", {
       method: "POST",
@@ -2476,8 +2472,6 @@ async function updatePhotographer(action, name) {
     photographerName.focus();
     return;
   }
-  if (action === "delete" && !confirm(`确定删除摄影师 ${finalName} 吗？`)) return;
-
   try {
     const result = await fetchJson("/api/photographers", {
       method: "POST",
