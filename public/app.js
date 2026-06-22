@@ -2605,10 +2605,10 @@ statusToggle.addEventListener("click", async () => {
     await fetchJson("/api/status", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ adminCode: adminCode.value.trim(), votingOpen: next })
+      body: JSON.stringify({ adminCode: adminCode.value.trim(), votingOpen: next, resultsPublished: next ? false : resultsPublished })
     });
     await loadData();
-    showToast(next ? "已开始投票" : "已恢复上传阶段");
+    showToast(next ? "已开始投票，结果已收回" : "已恢复上传阶段");
   } catch (error) {
     alert(error.message);
   }

@@ -2049,7 +2049,10 @@ async function handleStatusUpdate(req, res) {
   if (!isAdminPayload(payload)) return sendJson(res, 403, { error: "管理员口令不正确" });
   const db = readDb();
   const period = currentPeriod(db);
-  if (Object.prototype.hasOwnProperty.call(payload, "votingOpen")) period.votingOpen = Boolean(payload.votingOpen);
+  if (Object.prototype.hasOwnProperty.call(payload, "votingOpen")) {
+    period.votingOpen = Boolean(payload.votingOpen);
+    if (period.votingOpen) period.resultsPublished = false;
+  }
   if (Object.prototype.hasOwnProperty.call(payload, "resultsPublished")) {
     const nextPublished = Boolean(payload.resultsPublished);
     if (nextPublished && period.votingOpen) {
