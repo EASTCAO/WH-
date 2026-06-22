@@ -10931,3 +10931,44 @@ body[data-theme="dark"] .entry-card.selected .vote-check::after {
   border-right-color: #111714 !important;
   border-bottom-color: #111714 !important;
 }
+
+
+/* Final module card full names. */
+.layout-side .module-card {
+  min-height: 58px !important;
+  height: auto !important;
+  align-items: center !important;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}
+
+.layout-side .module-card .module-copy {
+  min-width: 0 !important;
+}
+
+.layout-side .module-card .module-name {
+  display: block !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: normal !important;
+  word-break: keep-all !important;
+  overflow-wrap: anywhere !important;
+  line-height: 1.22 !important;
+}
+
+.layout-side .module-card .module-status {
+  display: block !important;
+  margin-top: 3px !important;
+  white-space: nowrap !important;
+}
+
+@media (max-width: 760px) {
+  .layout-side .module-card {
+    min-height: 54px !important;
+  }
+
+  .layout-side .module-card .module-name {
+    font-size: 14px !important;
+  }
+}
