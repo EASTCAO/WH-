@@ -1166,7 +1166,7 @@ function renderStatusControls() {
   submitVote.classList.toggle("is-loading", isSubmittingVote);
   submitVote.textContent = isSubmittingVote
     ? "提交中..."
-    : activeCompleted ? "已提交，不能修改" : "提交本模块投票";
+    : activeCompleted ? "投票已完成" : "提交本模块投票";
   renderAdminVoteReady();
 }
 
@@ -1316,11 +1316,11 @@ function renderGallery() {
     node.querySelector(".entry-meta").textContent = entryMeta(entry);
     node.querySelector(".entry-hint").textContent = isOwn
       ? "我的作品，仅可查看"
-      : (activeCompleted ? "已提交，不能修改" : "点击查看全部图片");
+      : (activeCompleted ? "点击查看全部图片" : "点击查看全部图片");
     node.querySelector(".vote-check").disabled = !voter || Boolean(isOwn) || activeCompleted;
     node.querySelector(".vote-check").title = !voter
       ? "请先登录自己的姓名"
-      : (activeCompleted ? "本模块已提交，不能修改" : (isOwn ? "不能投自己的作品" : "选择整套作品"));
+      : (activeCompleted ? "投票已完成" : (isOwn ? "不能投自己的作品" : "选择整套作品"));
     node.querySelector(".vote-check").addEventListener("click", event => {
       event.stopPropagation();
       toggleEntry(entry);
