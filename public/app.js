@@ -301,7 +301,7 @@ function nextPendingModule(fromModuleName) {
 function updateSelectedCount() {
   const picked = activeBucket().size;
   selectedCount.textContent = isModuleCompleted(activeModule.name)
-    ? `已提交 ${picked} / ${activeLimit()}，可重新选择后覆盖`
+    ? `已提交 ${picked} / ${activeLimit()}，投票已锁定`
     : `已选作品 ${picked} / ${activeLimit()}`;
 }
 
@@ -1140,11 +1140,11 @@ function renderStatusControls() {
     downloadArchive.textContent = "\u4e0b\u8f7d\u5f52\u6863";
   }
   if (clearCurrentPeriod) clearCurrentPeriod.hidden = !adminMode;
-  submitVote.disabled = !votingOpen || !voterName() || isSubmittingVote;
+  submitVote.disabled = !votingOpen || !voterName() || isSubmittingVote || activeCompleted;
   submitVote.classList.toggle("is-loading", isSubmittingVote);
   submitVote.textContent = isSubmittingVote
     ? "提交中..."
-    : activeCompleted ? "重新提交本模块" : "提交本模块投票";
+    : activeCompleted ? "已提交，不能修改" : "提交本模块投票";
   renderAdminVoteReady();
 }
 
@@ -1284,13 +1284,16 @@ function renderGallery() {
   for (const entry of list) {
     const node = entryTemplate.content.firstElementChild.cloneNode(true);
     const isOwn = Boolean(entry.isOwn || (voter && entry.photographer === voter));
+    const activeCompleted = isModuleCompleted(activeModule.name);
     const isSelected = activeBucket().has(entry.id);
     node.classList.toggle("selected", isSelected);
-    node.classList.toggle("disabled", Boolean(isOwn));
+    node.classList.toggle("disabled", Boolean(isOwn || activeCompleted));
     node.querySelector(".entry-title").textContent = entryTitle(entry);
     node.querySelector(".entry-meta").textContent = entryMeta(entry);
-    node.querySelector(".vote-check").disabled = !voter || Boolean(isOwn);
-    node.querySelector(".vote-check").title = !voter ? "请先登录自己的姓名" : (isOwn ? "不能投自己的作品" : "选择整套作品");
+    node.querySelector(".vote-check").disabled = !voter || Boolean(isOwn) || activeCompleted;
+    node.querySelector(".vote-check").title = !voter
+      ? "请先登录自己的姓名"
+      : (activeCompleted ? "本模块已提交，不能修改" : (isOwn ? "不能投自己的作品" : "选择整套作品"));
     node.querySelector(".vote-check").addEventListener("click", event => {
       event.stopPropagation();
       toggleEntry(entry);
@@ -1730,6 +1733,10 @@ function toggleEntry(entry) {
   if (!voter) {
     alert("请先登录自己的姓名");
     voterInput.focus();
+    return;
+  }
+  if (isModuleCompleted(activeModule.name)) {
+    alert("本模块已经提交，不能修改投票结果");
     return;
   }
   if (entry.isOwn || (entry.photographer && entry.photographer === voter)) {
@@ -2300,6 +2307,10 @@ async function submitCurrentVote() {
   }
   if (!entryIds.length) {
     alert("请至少选择 1 个作品文件夹");
+    return;
+  }
+  if (isModuleCompleted(submittedModuleName)) {
+    alert("本模块已经提交，不能修改投票结果");
     return;
   }
   if (isSubmittingVote) return;
