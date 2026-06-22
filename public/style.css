@@ -9319,47 +9319,19 @@ body:not(.is-admin) .photographer-result-card[hidden] {
 }
 
 .entry-card.own-entry .entry-title::after {
-  content: "我的作品";
-  display: inline-flex;
-  align-items: center;
-  margin-left: 8px;
-  padding: 2px 8px;
-  border: 1px solid rgba(29, 111, 97, 0.42);
-  border-radius: 999px;
-  color: #0f5f51;
-  background: #e6f6ef;
-  font-size: 12px;
-  font-weight: 850;
-  vertical-align: middle;
+  content: none;
 }
 
-.entry-card.own-entry .folder-icon {
-  border-color: rgba(29, 111, 97, 0.45) !important;
-  background: #eaf8f1 !important;
-  color: #1d6f61 !important;
-}
-
-.entry-card.own-entry .folder-icon::after {
-  content: "MY";
-  position: absolute;
-  left: auto;
-  right: -7px;
-  top: -9px;
-  bottom: auto;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  min-width: 25px;
-  height: 18px;
-  padding: 0 5px;
-  border: 0;
+.entry-card.own-entry .entry-hint {
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 6px;
+  padding: 3px 9px;
+  border: 1px solid rgba(29, 111, 97, 0.24);
   border-radius: 999px;
-  background: #1d6f61;
-  color: #ffffff;
-  font-size: 10px;
-  font-weight: 900;
-  line-height: 1;
-  box-shadow: 0 6px 14px rgba(29, 111, 97, 0.2);
+  background: rgba(29, 111, 97, 0.08);
+  color: #0f5f51 !important;
+  font-weight: 800;
 }
 
 .entry-card.vote-locked:not(.own-entry) {
@@ -9380,20 +9352,13 @@ body[data-theme="dark"] .entry-card.own-entry {
 }
 
 body[data-theme="dark"] .entry-card.own-entry .entry-title::after {
-  border-color: rgba(143, 197, 178, 0.46);
-  color: #8fc5b2;
-  background: rgba(143, 197, 178, 0.16);
+  content: none;
 }
 
-body[data-theme="dark"] .entry-card.own-entry .folder-icon {
-  border-color: rgba(143, 197, 178, 0.48) !important;
-  background: #1b2a25 !important;
+body[data-theme="dark"] .entry-card.own-entry .entry-hint {
+  border-color: rgba(143, 197, 178, 0.3);
+  background: rgba(143, 197, 178, 0.12);
   color: #8fc5b2 !important;
-}
-
-body[data-theme="dark"] .entry-card.own-entry .folder-icon::after {
-  background: #8fc5b2;
-  color: #101614;
 }
 
 /* Keep photographer name and logout as one consistent header control group. */
