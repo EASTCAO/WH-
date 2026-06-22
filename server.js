@@ -60,6 +60,16 @@ const MODULES = [
 
 const MODULE_NAMES = new Set(MODULES.map(module => module.name));
 const MODULE_BY_NAME = new Map(MODULES.map(module => [module.name, module]));
+const RESULT_LIMIT_BY_MODULE = {
+  "图片（AI）": 3,
+  "图片（实拍）": 3,
+  "图片助理": 2,
+  "视频（卖点）": 2,
+  "视频（质量）": 2,
+  "简易视频": 3,
+  "视频助理": 2,
+  "AI视频": 1
+};
 const MEDIA_TYPES = new Set([
   ".jpg", ".jpeg", ".jfif", ".png", ".webp", ".gif", ".bmp", ".tif", ".tiff", ".avif", ".heic", ".heif",
   ".mp4", ".mov", ".m4v", ".webm"
@@ -888,6 +898,30 @@ function tiebreakerCountsFor(db) {
     counts[ballot.entryId] = (counts[ballot.entryId] || 0) + 1;
   }
   return counts;
+}
+
+function resultLimitForModule(moduleName) {
+  return RESULT_LIMIT_BY_MODULE[moduleName] || 3;
+}
+
+function isAwardTieGroup(db, moduleName, entryIds) {
+  const wanted = new Set(entryIds);
+  const voteCounts = voteCountsFor(db);
+  const tiebreakerCounts = tiebreakerCountsFor(db);
+  const ranked = currentEntries(db)
+    .filter(entry => entry.moduleName === moduleName)
+    .map(entry => ({
+      entry,
+      votes: voteCounts[entry.id] || 0,
+      tiebreakerVotes: tiebreakerCounts[entry.id] || 0
+    }))
+    .sort((a, b) => b.votes - a.votes || b.tiebreakerVotes - a.tiebreakerVotes || (a.entry.sequence || 0) - (b.entry.sequence || 0));
+
+  const tiedRanks = ranked
+    .map((row, index) => ({ ...row, rank: index + 1 }))
+    .filter(row => wanted.has(row.entry.id));
+
+  return tiedRanks.length >= 2 && tiedRanks.some(row => row.rank <= resultLimitForModule(moduleName));
 }
 
 function archiveEntryFolder(entry) {
@@ -1859,6 +1893,9 @@ async function handleTiebreakerUpdate(req, res) {
     if (tieEntries.some(entry => !entry)) return sendJson(res, 400, { error: "加赛作品无效" });
     const moduleName = MODULE_BY_NAME.has(requestedModuleName) ? requestedModuleName : tieEntries[0].moduleName;
     if (tieEntries.some(entry => entry.moduleName !== moduleName)) return sendJson(res, 400, { error: "加赛作品必须属于同一个模块" });
+    if (!isAwardTieGroup(db, moduleName, entryIds)) {
+      return sendJson(res, 400, { error: "只有影响获奖名次的平票作品才需要重投" });
+    }
 
     const sortedIds = [...entryIds].sort();
     const signature = sortedIds.join("|");

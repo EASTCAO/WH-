@@ -354,13 +354,17 @@ function tiebreakerText(entry) {
 
 function resultTieGroups(moduleName) {
   const groups = new Map();
-  for (const entry of moduleResultList(moduleName)) {
+  const list = moduleResultList(moduleName);
+  for (const [index, entry] of list.entries()) {
     if (!entry.votes) continue;
     const key = String(entry.votes);
     if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(entry);
+    groups.get(key).push({ entry, rank: index + 1 });
   }
-  return [...groups.values()].filter(group => group.length > 1);
+  const awardLimit = resultLimitForModule(moduleName);
+  return [...groups.values()]
+    .filter(group => group.length > 1 && group.some(item => item.rank <= awardLimit))
+    .map(group => group.map(item => item.entry));
 }
 
 function hasOpenTiebreakerFor(entryIds) {
