@@ -660,6 +660,59 @@ main {
   gap: 8px;
 }
 
+.admin-vote-ready {
+  display: grid;
+  gap: 3px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border: 1px solid #dfe6e2;
+  border-radius: 12px;
+  background: #f8faf9;
+  color: #475467;
+}
+
+.admin-vote-ready strong {
+  color: #111827;
+  font-size: 16px;
+  line-height: 1.15;
+}
+
+.admin-vote-ready span {
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.admin-vote-ready.is-done {
+  border-color: #9fd6b2;
+  background: #edf8f1;
+}
+
+.admin-vote-ready.is-done strong,
+.admin-vote-ready.is-done span {
+  color: #137333;
+}
+
+.admin-vote-ready.is-pending {
+  border-color: #fecaca;
+  background: #fff7f7;
+}
+
+.admin-vote-ready.is-pending strong,
+.admin-vote-ready.is-pending span {
+  color: #b42318;
+}
+
+.admin-vote-ready.is-waiting {
+  border-color: #f5d48b;
+  background: #fffbeb;
+}
+
+.admin-vote-ready.is-waiting strong,
+.admin-vote-ready.is-waiting span {
+  color: #92400e;
+}
+
 .voting-status-row {
   padding: 12px;
   border: 1px solid #edf0f3;
@@ -769,6 +822,49 @@ body[data-theme="dark"] .voting-status-admin summary span {
   border-color: rgba(220, 224, 205, 0.12);
   background: rgba(255, 255, 255, 0.04);
   color: var(--muted);
+}
+
+body[data-theme="dark"] .admin-vote-ready {
+  border-color: rgba(220, 224, 205, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+body[data-theme="dark"] .admin-vote-ready strong {
+  color: var(--ink);
+}
+
+body[data-theme="dark"] .admin-vote-ready span {
+  color: var(--muted);
+}
+
+body[data-theme="dark"] .admin-vote-ready.is-done {
+  border-color: rgba(74, 222, 128, 0.28);
+  background: rgba(61, 131, 97, 0.16);
+}
+
+body[data-theme="dark"] .admin-vote-ready.is-done strong,
+body[data-theme="dark"] .admin-vote-ready.is-done span {
+  color: #bbf7d0;
+}
+
+body[data-theme="dark"] .admin-vote-ready.is-pending {
+  border-color: rgba(248, 113, 113, 0.3);
+  background: rgba(180, 35, 24, 0.16);
+}
+
+body[data-theme="dark"] .admin-vote-ready.is-pending strong,
+body[data-theme="dark"] .admin-vote-ready.is-pending span {
+  color: #fecaca;
+}
+
+body[data-theme="dark"] .admin-vote-ready.is-waiting {
+  border-color: rgba(245, 158, 11, 0.32);
+  background: rgba(146, 64, 14, 0.16);
+}
+
+body[data-theme="dark"] .admin-vote-ready.is-waiting strong,
+body[data-theme="dark"] .admin-vote-ready.is-waiting span {
+  color: #fde68a;
 }
 
 body[data-theme="dark"] .voting-status-summary strong,

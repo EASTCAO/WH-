@@ -99,6 +99,7 @@ const downloadArchive = document.querySelector("#downloadArchive");
 const clearCurrentPeriod = document.querySelector("#clearCurrentPeriod");
 const optimizeStatus = document.querySelector("#optimizeStatus");
 const adminPanel = document.querySelector("#adminPanel");
+const adminVoteReady = document.querySelector("#adminVoteReady");
 const photographerName = document.querySelector("#photographerName");
 const addPhotographer = document.querySelector("#addPhotographer");
 const photographerAdmin = document.querySelector("#photographerAdmin");
@@ -678,12 +679,14 @@ function renderVotingStatus() {
   if (!adminMode) {
     votingStatusList.innerHTML = "";
     if (votingStatusSummary) votingStatusSummary.innerHTML = "";
+    renderAdminVoteReady();
     return;
   }
   const status = votingStatus;
   if (!status || !status.modules) {
     votingStatusList.innerHTML = `<div class="empty compact">暂无进度</div>`;
     if (votingStatusSummary) votingStatusSummary.innerHTML = "";
+    renderAdminVoteReady();
     return;
   }
 
@@ -750,6 +753,47 @@ function renderVotingStatus() {
       </div>
     `;
   }).join("");
+  renderAdminVoteReady();
+}
+
+function renderAdminVoteReady() {
+  if (!adminVoteReady) return;
+  adminVoteReady.hidden = !adminMode;
+  if (!adminMode) {
+    adminVoteReady.innerHTML = "";
+    adminVoteReady.className = "admin-vote-ready";
+    return;
+  }
+  const stats = votingCompletionStats();
+  if (!stats.assigned.length) {
+    adminVoteReady.className = "admin-vote-ready is-unset";
+    adminVoteReady.innerHTML = `
+      <strong>未配置投票名单</strong>
+      <span>先设置每个模块的应投人员，系统才能判断是否全部投完。</span>
+    `;
+    return;
+  }
+  if (!votingOpen) {
+    adminVoteReady.className = "admin-vote-ready is-waiting";
+    adminVoteReady.innerHTML = `
+      <strong>等待开始投票</strong>
+      <span>已配置 ${stats.totalExpected} 人次，点击「开始投票」后摄影师才能提交。</span>
+    `;
+    return;
+  }
+  if (!stats.pendingPeople) {
+    adminVoteReady.className = "admin-vote-ready is-done";
+    adminVoteReady.innerHTML = `
+      <strong>全部已投完</strong>
+      <span>${stats.totalVoted}/${stats.totalExpected} 人次已完成，可以公布结果。</span>
+    `;
+    return;
+  }
+  adminVoteReady.className = "admin-vote-ready is-pending";
+  adminVoteReady.innerHTML = `
+    <strong>还差 ${stats.pendingPeople} 人未投</strong>
+    <span>${stats.pendingModules.length} 个模块未完成，已投 ${stats.totalVoted}/${stats.totalExpected} 人次。</span>
+  `;
 }
 
 function votingCompletionStats() {
@@ -1065,7 +1109,12 @@ function renderStatusControls() {
   statusToggle.textContent = votingOpen ? "恢复上传" : "开始投票";
   publishToggle.hidden = !adminMode;
   publishToggle.disabled = !adminMode;
-  publishToggle.textContent = resultsPublished ? "收回结果" : "公布结果";
+  if (resultsPublished) {
+    publishToggle.textContent = "收回结果";
+  } else {
+    const stats = votingCompletionStats();
+    publishToggle.textContent = stats.assigned.length && !stats.pendingPeople ? "公布结果" : "仍可公布";
+  }
   if (adminToggle) {
     adminToggle.hidden = !adminMode;
     adminToggle.textContent = "退出后台";
@@ -1081,6 +1130,7 @@ function renderStatusControls() {
   submitVote.textContent = isSubmittingVote
     ? "提交中..."
     : activeCompleted ? "重新提交本模块" : "提交本模块投票";
+  renderAdminVoteReady();
 }
 
 function renderOptimizeStatus() {
