@@ -1394,9 +1394,14 @@ body[data-theme="dark"] .layout-side .module-board {
 }
 
 .entry-card.selected .vote-check::after {
-  content: "✓";
-  font-size: 20px;
-  line-height: 1;
+  content: "" !important;
+  display: block !important;
+  width: 8px !important;
+  height: 15px !important;
+  margin: 5px auto 0 !important;
+  border-right: 3px solid #ffffff !important;
+  border-bottom: 3px solid #ffffff !important;
+  transform: rotate(45deg) !important;
 }
 
 .folder-icon {
@@ -10435,14 +10440,14 @@ body[data-theme="dark"] .result-module .tie-admin-row {
   white-space: nowrap !important;
 }
 
-/* Softer vote selection control: no heavy black filled circle. */
+/* Stronger vote selection control: selected state must be obvious. */
 .entry-card .vote-check,
 .vote-check {
-  width: 28px !important;
-  height: 28px !important;
+  width: 32px !important;
+  height: 32px !important;
   border-radius: 999px !important;
   border: 1px solid rgba(17, 17, 17, 0.22) !important;
-  background: rgba(255, 255, 255, 0.92) !important;
+  background: rgba(255, 255, 255, 0.94) !important;
   color: transparent !important;
   box-shadow: 0 1px 4px rgba(17, 17, 17, 0.06) !important;
   transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease !important;
@@ -10450,36 +10455,39 @@ body[data-theme="dark"] .result-module .tie-admin-row {
 
 .entry-card .vote-check:hover:not(:disabled),
 .vote-check:hover:not(:disabled) {
-  border-color: rgba(29, 111, 97, 0.52) !important;
+  border-color: rgba(29, 111, 97, 0.58) !important;
   background: #ffffff !important;
-  box-shadow: 0 0 0 4px rgba(29, 111, 97, 0.08) !important;
+  box-shadow: 0 0 0 4px rgba(29, 111, 97, 0.10) !important;
   transform: translateY(-1px) !important;
 }
 
 .entry-card.selected .vote-check,
 .entry-card.selected .vote-check:hover,
-.entry-card.selected .vote-check:focus-visible {
-  border-color: rgba(29, 111, 97, 0.72) !important;
-  background: #f3fbf8 !important;
-  color: #1d6f61 !important;
-  box-shadow: inset 0 0 0 4px #ffffff, 0 0 0 3px rgba(29, 111, 97, 0.10) !important;
+.entry-card.selected .vote-check:focus-visible,
+.entry-card.selected .vote-check:disabled,
+.entry-card.selected .vote-check:disabled:hover {
+  opacity: 1 !important;
+  border-color: #1d6f61 !important;
+  background: #1d6f61 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 0 4px rgba(29, 111, 97, 0.16), 0 10px 22px rgba(29, 111, 97, 0.22) !important;
 }
 
 .entry-card.selected .vote-check::after {
-  content: "✓" !important;
+  content: "?" !important;
   display: grid !important;
   place-items: center !important;
   width: 100% !important;
   height: 100% !important;
-  color: #1d6f61 !important;
-  font-size: 14px !important;
-  font-weight: 850 !important;
+  color: #ffffff !important;
+  font-size: 20px !important;
+  font-weight: 950 !important;
   line-height: 1 !important;
 }
 
 .entry-card .vote-check:disabled,
 .vote-check:disabled {
-  opacity: 0.45 !important;
+  opacity: 0.42 !important;
   background: #f4f4f2 !important;
   box-shadow: none !important;
 }
@@ -10491,15 +10499,19 @@ body[data-theme="dark"] .vote-check {
 }
 
 body[data-theme="dark"] .entry-card.selected .vote-check,
-body[data-theme="dark"] .entry-card.selected .vote-check:hover {
-  border-color: rgba(143, 197, 178, 0.72) !important;
-  background: #202a25 !important;
-  color: #8fc5b2 !important;
-  box-shadow: inset 0 0 0 4px #181818, 0 0 0 3px rgba(143, 197, 178, 0.12) !important;
+body[data-theme="dark"] .entry-card.selected .vote-check:hover,
+body[data-theme="dark"] .entry-card.selected .vote-check:disabled,
+body[data-theme="dark"] .entry-card.selected .vote-check:disabled:hover {
+  opacity: 1 !important;
+  border-color: #8fc5b2 !important;
+  background: #8fc5b2 !important;
+  color: #111714 !important;
+  box-shadow: 0 0 0 4px rgba(143, 197, 178, 0.18), 0 10px 22px rgba(0, 0, 0, 0.34) !important;
 }
 
 body[data-theme="dark"] .entry-card.selected .vote-check::after {
-  color: #8fc5b2 !important;
+  border-right-color: #111714 !important;
+  border-bottom-color: #111714 !important;
 }
 
 /* Simpler tiebreaker flow: pick one item, then confirm. */
@@ -10878,4 +10890,44 @@ body[data-theme="dark"] #tiebreakerPanel .tiebreaker-card button.submit-tiebreak
   background: #8fd9b5 !important;
   background-image: none !important;
   color: #101010 !important;
+}
+
+
+/* Final selected vote check visibility. */
+.entry-card.selected .vote-check,
+.entry-card.selected .vote-check:hover,
+.entry-card.selected .vote-check:focus-visible,
+.entry-card.selected .vote-check:disabled,
+.entry-card.selected .vote-check:disabled:hover {
+  opacity: 1 !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-color: #1d6f61 !important;
+  background: #1d6f61 !important;
+  box-shadow: 0 0 0 4px rgba(29, 111, 97, 0.16), 0 10px 22px rgba(29, 111, 97, 0.22) !important;
+}
+
+.entry-card.selected .vote-check::after {
+  content: "" !important;
+  display: block !important;
+  width: 8px !important;
+  height: 15px !important;
+  margin: 5px auto 0 !important;
+  border-right: 3px solid #ffffff !important;
+  border-bottom: 3px solid #ffffff !important;
+  transform: rotate(45deg) !important;
+}
+
+body[data-theme="dark"] .entry-card.selected .vote-check,
+body[data-theme="dark"] .entry-card.selected .vote-check:hover,
+body[data-theme="dark"] .entry-card.selected .vote-check:disabled,
+body[data-theme="dark"] .entry-card.selected .vote-check:disabled:hover {
+  border-color: #8fc5b2 !important;
+  background: #8fc5b2 !important;
+  box-shadow: 0 0 0 4px rgba(143, 197, 178, 0.18), 0 10px 22px rgba(0, 0, 0, 0.34) !important;
+}
+
+body[data-theme="dark"] .entry-card.selected .vote-check::after {
+  border-right-color: #111714 !important;
+  border-bottom-color: #111714 !important;
 }
