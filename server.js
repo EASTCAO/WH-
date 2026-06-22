@@ -1859,6 +1859,7 @@ async function handleVote(req, res) {
   if (!voter) return sendJson(res, 400, { error: "请输入投票人姓名" });
   if (!(db.photographers || []).includes(voter)) return sendJson(res, 403, { error: "姓名不在摄影师名单中，请联系管理员添加" });
   if (!module) return sendJson(res, 400, { error: "模块不存在" });
+  if (isVotingFullyCompleted(db)) return sendJson(res, 400, { error: "投票已完成，不能修改投票结果" });
   if (entryIds.length === 0 || entryIds.length > module.voteLimit) {
     return sendJson(res, 400, { error: `${module.name} 需要选择 1 到 ${module.voteLimit} 个作品` });
   }
@@ -2180,6 +2181,11 @@ function votingStatusFor(db) {
   });
   const hasAnyExpected = modules.some(item => item.expected.length);
   return { modules, allDone: hasAnyExpected && allDone, hasAnyExpected };
+}
+
+function isVotingFullyCompleted(db) {
+  const status = votingStatusFor(db);
+  return Boolean(db.votingOpen && status.hasAnyExpected && status.allDone);
 }
 
 async function handleModuleVotersUpdate(req, res) {

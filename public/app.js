@@ -306,7 +306,7 @@ function isModuleCompleted(moduleName) {
 }
 
 function isModuleLocked(moduleName) {
-  return isModuleCompleted(moduleName) && !votingOpen;
+  return isModuleCompleted(moduleName) && (!votingOpen || isVotingFullyCompleted());
 }
 
 function nextPendingModule(fromModuleName) {
@@ -838,6 +838,11 @@ function votingCompletionStats() {
   return { assigned, totalExpected, totalVoted, pendingModules, pendingPeople, allDone: Boolean(votingStatus?.allDone) };
 }
 
+function isVotingFullyCompleted() {
+  const stats = votingCompletionStats();
+  return Boolean(votingOpen && stats.assigned.length && !stats.pendingPeople);
+}
+
 function votingPendingMessage(limitPerModule = 6) {
   const stats = votingCompletionStats();
   if (!stats.assigned.length) return "还没有设置应投名单，请先在投票名单分组里配置。";
@@ -1166,11 +1171,12 @@ function renderStatusControls() {
     downloadArchive.textContent = "\u4e0b\u8f7d\u5f52\u6863";
   }
   if (clearCurrentPeriod) clearCurrentPeriod.hidden = !adminMode;
-  submitVote.disabled = !votingOpen || !voterName() || isSubmittingVote;
+  const fullyCompleted = isVotingFullyCompleted();
+  submitVote.disabled = !votingOpen || !voterName() || isSubmittingVote || fullyCompleted;
   submitVote.classList.toggle("is-loading", isSubmittingVote);
   submitVote.textContent = isSubmittingVote
     ? "提交中..."
-    : activeCompleted ? (votingOpen ? "更新本模块投票" : "投票已完成") : "提交本模块投票";
+    : fullyCompleted ? "投票已完成" : activeCompleted ? (votingOpen ? "更新本模块投票" : "投票已完成") : "提交本模块投票";
   renderAdminVoteReady();
 }
 
@@ -1204,6 +1210,7 @@ function renderModules() {
     resultCounts.set(result.moduleName, (resultCounts.get(result.moduleName) || 0) + result.votes);
   }
   const canViewResultCounts = adminMode || resultsPublished;
+  const fullyCompleted = isVotingFullyCompleted();
 
   moduleGrid.innerHTML = modules.map((module, index) => {
     const count = moduleEntries(module.name).length;
@@ -1212,7 +1219,7 @@ function renderModules() {
     const completed = isModuleCompleted(module.name);
     const empty = count === 0;
     const started = picked > 0 && !completed;
-    const statusText = empty ? "无作品" : completed ? (votingOpen ? "可修改" : "已完成") : started ? `已选 ${picked}/${module.voteLimit}` : "待投票";
+    const statusText = empty ? "无作品" : completed ? (votingOpen && !fullyCompleted ? "可修改" : "已完成") : started ? `已选 ${picked}/${module.voteLimit}` : "待投票";
     const statusClass = empty ? " empty" : completed ? " done" : started ? " started" : " pending";
     const activeClass = module.name === activeModule.name ? " active" : "";
     const completedClass = completed ? " completed" : "";
