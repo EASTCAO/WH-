@@ -2161,7 +2161,7 @@ function shouldOptimizeUploadImage(file) {
 }
 
 function shouldOptimizeUploadVideo(file) {
-  return file.size >= CLIENT_VIDEO_OPTIMIZE_MIN_BYTES && (file.type || "").startsWith("video/");
+  return false;
 }
 
 function preferredVideoMimeType() {

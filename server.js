@@ -1532,17 +1532,19 @@ async function handleUpload(req, res) {
         originalSrc: `/data/uploads/${id}/${originalFilename}`,
         kind: file.mediaKind,
         name: file.name || path.basename(file.relativePath),
-        optimized: false,
-        processing: true
+        optimized: file.mediaKind === "video",
+        processing: file.mediaKind !== "video"
       });
-      optimizeJobs.push({
-        entryId: id,
-        mediaId,
-        originalDiskPath,
-        originalFilename,
-        ext: file.ext,
-        mediaKind: file.mediaKind
-      });
+      if (file.mediaKind !== "video") {
+        optimizeJobs.push({
+          entryId: id,
+          mediaId,
+          originalDiskPath,
+          originalFilename,
+          ext: file.ext,
+          mediaKind: file.mediaKind
+        });
+      }
       mediaTotal += 1;
     }
 
@@ -1678,30 +1680,18 @@ async function handleStorageComplete(req, res) {
       });
     }
     const mediaId = file.id || hash(`${file.entryId}|${file.publicUrl}`);
-    const alreadyOptimizedVideo = file.kind === "video" && file.optimizedForUpload;
+    const videoDirectUpload = file.kind === "video";
+    const alreadyOptimizedVideo = videoDirectUpload && file.optimizedForUpload;
     grouped.get(key).media.push({
       id: mediaId,
       src: file.publicUrl,
       originalSrc: file.publicUrl,
       kind: file.kind,
       name: file.name || path.basename(file.objectKey || file.publicUrl),
-      optimized: Boolean(alreadyOptimizedVideo),
-      processing: file.kind === "video" && HAS_FFMPEG && !alreadyOptimizedVideo,
+      optimized: Boolean(videoDirectUpload || alreadyOptimizedVideo),
+      processing: false,
       storage: "object"
     });
-    if (file.kind === "video" && HAS_FFMPEG && !alreadyOptimizedVideo) {
-      optimizeJobs.push({
-        entryId: file.entryId,
-        mediaId,
-        originalSrc: file.publicUrl,
-        originalFilename: file.name || path.basename(file.objectKey || file.publicUrl),
-        objectKey: file.objectKey || "",
-        periodId: file.periodId || dbSnapshot.currentPeriodId,
-        mediaKind: "video",
-        ext: path.extname(file.name || file.objectKey || file.publicUrl).toLowerCase() || ".mp4",
-        storage: "object"
-      });
-    }
     mediaTotal += 1;
   }
 
@@ -2279,7 +2269,7 @@ function handleApi(req, res) {
         images: true,
         videos: HAS_FFMPEG,
         imageMode: "小图直接展示，大图生成WebP展示版，保留原图",
-        videoMode: HAS_FFMPEG ? "MP4展示版，保留原视频" : "未启用：未检测到 ffmpeg",
+        videoMode: "原视频直传对象存储，上传后不经过 Zeabur 转码",
         videoDisplay: {
           width: VIDEO_DISPLAY_WIDTH,
           height: VIDEO_DISPLAY_HEIGHT,
