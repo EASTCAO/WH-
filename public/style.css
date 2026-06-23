@@ -694,8 +694,8 @@ main {
 }
 
 .admin-vote-ready.is-pending {
-  border-color: #fecaca;
-  background: #fff7f7;
+  border-color: #f0c5c0;
+  background: #fffafa;
 }
 
 .admin-vote-ready.is-pending strong,
@@ -715,28 +715,32 @@ main {
 
 .admin-vote-missing-list {
   display: grid;
-  gap: 7px;
-  margin-top: 8px;
+  gap: 0;
+  margin-top: 10px;
+  border-top: 1px solid rgba(180, 35, 24, 0.14);
 }
 
 .admin-vote-missing-row {
-  display: grid;
-  grid-template-columns: 78px minmax(0, 1fr);
-  align-items: start;
-  gap: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(180, 35, 24, 0.1);
 }
 
 .admin-vote-missing-row > span {
   color: #991b1b !important;
   font-size: 12px;
   font-weight: 750;
-  line-height: 24px;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .admin-vote-missing-row p {
   display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
+  justify-content: flex-end;
   min-width: 0;
   margin: 0;
 }
@@ -745,20 +749,22 @@ main {
 .admin-vote-missing-row em {
   display: inline-flex;
   align-items: center;
-  min-height: 24px;
-  padding: 0 8px;
-  border: 1px solid #fecaca;
+  min-height: 22px;
+  padding: 0 7px;
+  border: 1px solid rgba(180, 35, 24, 0.2);
   border-radius: 999px;
   background: #ffffff;
   color: #991b1b;
-  font-size: 12px;
+  font-size: 11px;
   font-style: normal;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .admin-vote-missing-more {
+  padding-top: 8px;
   color: #b42318;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 650;
 }
 

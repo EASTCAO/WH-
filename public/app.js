@@ -807,19 +807,17 @@ function renderAdminVoteReady() {
     return;
   }
   adminVoteReady.className = "admin-vote-ready is-pending";
-  const pendingRows = stats.pendingModules.slice(0, 4).map(module => {
+  const pendingRows = stats.pendingModules.slice(0, 6).map(module => {
     const notVoted = module.notVoted || [];
-    const visibleNames = notVoted.slice(0, 8).map(name => `<b>${escapeHtml(name)}</b>`).join("");
-    const more = notVoted.length > 8 ? `<em>等 ${notVoted.length} 人</em>` : "";
     return `
       <div class="admin-vote-missing-row">
         <span>${escapeHtml(module.name)}</span>
-        <p>${visibleNames}${more}</p>
+        <p><b>未投 ${notVoted.length} 人</b></p>
       </div>
     `;
   }).join("");
-  const hiddenModules = stats.pendingModules.length > 4
-    ? `<div class="admin-vote-missing-more">还有 ${stats.pendingModules.length - 4} 个模块未展开，点「投票进度」查看全部。</div>`
+  const hiddenModules = stats.pendingModules.length > 6
+    ? `<div class="admin-vote-missing-more">还有 ${stats.pendingModules.length - 6} 个模块，点「投票进度」查看名单。</div>`
     : "";
   adminVoteReady.innerHTML = `
     <strong>还差 ${stats.pendingPeople} 人未投</strong>
