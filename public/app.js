@@ -1441,7 +1441,7 @@ function renderImageViewer() {
   const src = mediaSrc(item);
   const fallbackSrc = mediaFallbackSrc(item);
   viewerStage.innerHTML = item.kind === "video"
-    ? `<video class="viewer-media" src="${src}" controls autoplay playsinline preload="metadata"></video>`
+    ? `<video class="viewer-media" src="${src}" controls playsinline preload="metadata"></video>`
     : `<img class="viewer-media" src="${src}" data-fallback-src="${fallbackSrc}" alt="${entryTitle(previewEntry)} 第 ${viewerIndex + 1} 张">`;
   const media = viewerMedia();
   media?.addEventListener("error", () => {
