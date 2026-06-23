@@ -672,16 +672,17 @@ function photographerNamesInText(values, photographers) {
 }
 
 function entryVideoAdminDisplayTitle(entry, photographers = []) {
-  if (entry.adminDisplayTitle) return entry.adminDisplayTitle;
   if (!shouldUseVideoAdminDisplay(entry.moduleName)) return "";
   const mediaName = (entry.media || []).map(item => item.name).filter(Boolean).join(" ");
-  return videoAdminDisplayTitle({
+  const computedTitle = videoAdminDisplayTitle({
     moduleName: entry.moduleName,
     sku: entry.sku,
     title: entry.title,
     photographer: entry.photographer,
     mediaName
   }, photographers);
+  if (computedTitle && (computedTitle.includes("（") || !entry.adminDisplayTitle)) return computedTitle;
+  return entry.adminDisplayTitle || computedTitle;
 }
 
 function isExcludedUploadPath(relativePath) {
