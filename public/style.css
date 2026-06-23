@@ -9226,101 +9226,40 @@ body.is-admin .layout-main > .upload-status-main {
   padding: 12px 14px;
 }
 
-.layout-main > .upload-status-main.is-video-cache {
-  align-items: center;
-  padding: 10px 14px;
-}
-
-.video-cache-status {
-  width: 100%;
-  display: grid;
-  grid-template-columns: auto 1fr auto 1fr auto;
-  align-items: center;
-  gap: 10px;
-}
-
-.video-cache-step {
+.entry-processing-badge {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  min-width: 0;
-  color: var(--ui-text-soft);
-  font-size: 12px;
+  gap: 6px;
+  width: max-content;
+  max-width: 100%;
+  margin-top: 7px;
+  padding: 4px 9px;
+  border: 1px solid #f1c88b;
+  border-radius: 999px;
+  background: #fff7ea;
+  color: #8a5a10;
+  font-size: 11px;
   font-weight: 700;
   white-space: nowrap;
 }
 
-.video-cache-step i {
-  width: 24px;
-  height: 24px;
-  display: inline-grid;
-  place-items: center;
+.entry-processing-badge i {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
   border-radius: 999px;
-  border: 1px solid var(--ui-line);
-  font-style: normal;
-  font-size: 12px;
-  line-height: 1;
+  background: #d97706;
+  box-shadow: 0 0 0 0 rgba(217, 119, 6, .3);
+  animation: entryProcessingPulse 1.25s ease-in-out infinite;
 }
 
-.video-cache-step.is-done {
-  color: #0f766e;
+.entry-card.is-processing {
+  border-color: #f1c88b !important;
 }
 
-.video-cache-step.is-done i {
-  border-color: #99d6ce;
-  background: #e9f8f5;
-}
-
-.video-cache-step.is-working {
-  color: var(--ui-text);
-}
-
-.video-cache-step.is-working i {
-  border-color: #111111;
-  border-top-color: transparent;
-  animation: videoCacheSpin 900ms linear infinite;
-}
-
-.video-cache-step.is-muted i {
-  color: var(--ui-text-soft);
-}
-
-.video-cache-flow {
-  height: 2px;
-  min-width: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  overflow: hidden;
-  border-radius: 999px;
-  background: #eceff1;
-}
-
-.video-cache-flow b {
-  width: 4px;
-  height: 4px;
-  display: block;
-  border-radius: 999px;
-  background: #111111;
-  opacity: .35;
-  animation: videoCachePulse 1.2s ease-in-out infinite;
-}
-
-.video-cache-flow b:nth-child(2) {
-  animation-delay: 120ms;
-}
-
-.video-cache-flow b:nth-child(3) {
-  animation-delay: 240ms;
-}
-
-@keyframes videoCacheSpin {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes videoCachePulse {
-  0%, 100% { opacity: .2; transform: scale(.8); }
-  50% { opacity: .75; transform: scale(1); }
+@keyframes entryProcessingPulse {
+  0%, 100% { opacity: .45; box-shadow: 0 0 0 0 rgba(217, 119, 6, .28); }
+  50% { opacity: 1; box-shadow: 0 0 0 5px rgba(217, 119, 6, 0); }
 }
 
 .upload-progress-shell {
@@ -9393,26 +9332,18 @@ body[data-theme="dark"] .upload-progress-track span {
   background: #f5f5f5;
 }
 
-body[data-theme="dark"] .video-cache-step.is-done {
-  color: #7dd3c7;
+body[data-theme="dark"] .entry-processing-badge {
+  border-color: #7c4d17;
+  background: #2c2113;
+  color: #f6c77b;
 }
 
-body[data-theme="dark"] .video-cache-step.is-done i {
-  border-color: #216c63;
-  background: #112d2a;
+body[data-theme="dark"] .entry-processing-badge i {
+  background: #f59e0b;
 }
 
-body[data-theme="dark"] .video-cache-step.is-working i {
-  border-color: #f5f5f5;
-  border-top-color: transparent;
-}
-
-body[data-theme="dark"] .video-cache-flow {
-  background: #2a2a2a;
-}
-
-body[data-theme="dark"] .video-cache-flow b {
-  background: #f5f5f5;
+body[data-theme="dark"] .entry-card.is-processing {
+  border-color: #7c4d17 !important;
 }
 
 body:not(.is-admin) .photographer-result-card {

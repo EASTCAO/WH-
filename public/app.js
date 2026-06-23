@@ -156,22 +156,7 @@ function voterName() {
 
 function setStatus(text) {
   uploadStatus.classList.remove("is-progress");
-  uploadStatus.classList.remove("is-video-cache");
   uploadStatus.textContent = text;
-}
-
-function setVideoCacheStatus(moduleName) {
-  uploadStatus.classList.remove("is-progress");
-  uploadStatus.classList.add("is-video-cache");
-  uploadStatus.innerHTML = `
-    <div class="video-cache-status" aria-label="${escapeHtml(moduleName)} 上传完成，视频缓存中">
-      <div class="video-cache-step is-done"><i>✓</i><span>上传完成</span></div>
-      <div class="video-cache-flow" aria-hidden="true"><b></b><b></b><b></b></div>
-      <div class="video-cache-step is-working"><i></i><span>缓存中</span></div>
-      <div class="video-cache-flow" aria-hidden="true"><b></b><b></b><b></b></div>
-      <div class="video-cache-step is-muted"><i>▶</i><span>稍后播放</span></div>
-    </div>
-  `;
 }
 
 function setUploadProgress(title, loaded, total, detail = "") {
@@ -182,7 +167,6 @@ function setUploadProgress(title, loaded, total, detail = "") {
   const speed = safeLoaded / elapsed;
   const remaining = safeTotal && speed ? Math.max(0, (safeTotal - safeLoaded) / speed) : 0;
 
-  uploadStatus.classList.remove("is-video-cache");
   uploadStatus.classList.add("is-progress");
   uploadStatus.innerHTML = "";
 
@@ -1336,15 +1320,23 @@ function renderGallery() {
     const activeCompleted = isModuleCompleted(activeModule.name);
     const activeLocked = isModuleLocked(activeModule.name);
     const isSelected = activeBucket().has(entry.id);
+    const hasProcessingVideo = (entry.media || []).some(item => item.kind === "video" && item.processing);
     node.classList.toggle("selected", isSelected);
     node.classList.toggle("own-entry", isOwn);
     node.classList.toggle("vote-locked", activeLocked);
+    node.classList.toggle("is-processing", hasProcessingVideo);
     node.classList.toggle("disabled", Boolean(isOwn || activeLocked));
     node.querySelector(".entry-title").textContent = entryTitle(entry);
     node.querySelector(".entry-meta").textContent = entryMeta(entry);
     node.querySelector(".entry-hint").textContent = isOwn
       ? "我的作品，仅可查看"
       : "点击查看全部图片";
+    if (hasProcessingVideo) {
+      const badge = document.createElement("div");
+      badge.className = "entry-processing-badge";
+      badge.innerHTML = `<i aria-hidden="true"></i><span>缓存中</span>`;
+      node.querySelector(".entry-info").appendChild(badge);
+    }
     node.querySelector(".vote-check").disabled = !voter || Boolean(isOwn) || activeLocked;
     node.querySelector(".vote-check").title = !voter
       ? "请先登录自己的姓名"
@@ -1972,11 +1964,9 @@ async function uploadFiles(files, moduleName) {
     const uploadOwner = adminMode ? "文件夹识别到的摄影师" : voterName();
     const uploadedVideo = modules.find(module => module.name === moduleName)?.kind === "video"
       || mediaFiles.some(file => /\.(mp4|mov|m4v|webm)$/i.test(file.name));
-    if (uploadedVideo) {
-      setVideoCacheStatus(moduleName);
-    } else {
-      setStatus(`${moduleName} 上传完成：已处理 ${totalMedia} 个媒体文件，作品列表已刷新。`);
-    }
+    setStatus(uploadedVideo
+      ? `${moduleName} 上传完成。`
+      : `${moduleName} 上传完成：已处理 ${totalMedia} 个媒体文件，作品列表已刷新。`);
     showToast(`${moduleName} 上传成功，已记录为${uploadOwner}的作品`, "success");
     suppressNextResultDialog = true;
     await loadData();
