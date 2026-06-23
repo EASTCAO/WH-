@@ -809,7 +809,7 @@ function publicEntry(entry) {
   const media = entry.media || (entry.images || []).map(src => ({ src, kind: "image" }));
   const viewMedia = media.map(item => ({
     ...item,
-    src: item.kind === "video" ? proxiedMediaUrl(item.src) : item.src,
+    src: item.src,
     fallbackSrc: isStoragePublicUrl(item.src) ? proxiedMediaUrl(item.src) : ""
   }));
   const displaySku = displaySkuForEntry(entry);
@@ -833,7 +833,7 @@ function publicEntry(entry) {
 function voterMedia(entry) {
   const media = entry.media || (entry.images || []).map(src => ({ src, kind: "image" }));
   return media.map(item => ({
-    src: item.kind === "video" ? proxiedMediaUrl(item.src) : item.src,
+    src: item.src,
     fallbackSrc: isStoragePublicUrl(item.src) ? proxiedMediaUrl(item.src) : "",
     kind: item.kind,
     processing: Boolean(item.processing),
