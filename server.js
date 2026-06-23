@@ -648,16 +648,40 @@ function shouldUseVideoAdminDisplay(moduleName) {
 function videoAdminDisplayTitle(info, photographers = []) {
   if (!shouldUseVideoAdminDisplay(info.moduleName)) return "";
   const sku = bestSkuCandidate([info.sku, info.title, info.workFolder, info.relativePath], photographers) || info.sku;
-  const names = knownPhotographerNames([
-    info.workFolder,
-    info.relativePath,
-    info.title,
-    info.photographer
-  ], photographers);
+  const names = photographerNamesInText([info.workFolder, info.relativePath, info.title, info.photographer, info.mediaName], photographers);
   if (!sku || !names.length) return "";
   const primary = names[0] || info.photographer;
   const secondary = names.find(name => name !== primary) || "";
   return secondary ? `${sku}-${primary}（${secondary}）` : `${sku}-${primary}`;
+}
+
+function photographerNamesInText(values, photographers) {
+  const list = Array.isArray(photographers) ? photographers.filter(Boolean) : [];
+  const text = values.map(value => normalizeName(value)).join(" ");
+  const seen = new Set();
+  return list
+    .map(name => ({ name, index: text.indexOf(name) }))
+    .filter(item => item.index >= 0)
+    .sort((a, b) => a.index - b.index || b.name.length - a.name.length)
+    .map(item => item.name)
+    .filter(name => {
+      if (seen.has(name)) return false;
+      seen.add(name);
+      return true;
+    });
+}
+
+function entryVideoAdminDisplayTitle(entry, photographers = []) {
+  if (entry.adminDisplayTitle) return entry.adminDisplayTitle;
+  if (!shouldUseVideoAdminDisplay(entry.moduleName)) return "";
+  const mediaName = (entry.media || []).map(item => item.name).filter(Boolean).join(" ");
+  return videoAdminDisplayTitle({
+    moduleName: entry.moduleName,
+    sku: entry.sku,
+    title: entry.title,
+    photographer: entry.photographer,
+    mediaName
+  }, photographers);
 }
 
 function isExcludedUploadPath(relativePath) {
@@ -834,6 +858,7 @@ function publicEntry(entry) {
     fallbackSrc: isStoragePublicUrl(item.src) ? proxiedMediaUrl(item.src) : ""
   }));
   const displaySku = displaySkuForEntry(entry);
+  const adminDisplayTitle = entryVideoAdminDisplayTitle(entry, readDb().photographers || []);
   return {
     id: entry.id,
     moduleId: entry.moduleId || entry.board,
@@ -842,7 +867,7 @@ function publicEntry(entry) {
     photographer: entry.photographer,
     sku: displaySku,
     title: entry.title,
-    adminDisplayTitle: entry.adminDisplayTitle || "",
+    adminDisplayTitle,
     sequence: entry.sequence || 0,
     mediaCount: viewMedia.length,
     imageCount: viewMedia.filter(item => item.kind === "image").length,
