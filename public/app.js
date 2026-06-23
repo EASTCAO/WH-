@@ -2045,7 +2045,10 @@ async function uploadBatchToObjectStorage(batch, moduleName, batchNo, batchCount
     name: file.name,
     relativePath: file.relativePath || file.webkitRelativePath || file.name,
     type: file.type || "",
-    size: file.size || 0
+    size: file.size || 0,
+    optimizedForUpload: Boolean(file.optimizedForUpload),
+    originalName: file.originalName || "",
+    originalSize: file.originalSize || 0
   }));
   setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batchCount} 批准备直传对象存储...`);
   const signed = await fetchJson("/api/storage/sign", {
@@ -2175,6 +2178,8 @@ async function prepareDirectUploadFile(file) {
         lastModified: file.lastModified
       });
       optimizedFile.relativePath = optimizedRelativePath;
+      optimizedFile.originalName = file.name;
+      optimizedFile.originalSize = file.size || 0;
       optimizedFile.uploadSavedBytes = file.size - optimizedFile.size;
       optimizedFile.optimizedForUpload = true;
       return optimizedFile;
@@ -2208,7 +2213,7 @@ function shouldOptimizeUploadImage(file) {
 }
 
 function shouldOptimizeUploadVideo(file) {
-  return false;
+  return file.size >= CLIENT_VIDEO_OPTIMIZE_MIN_BYTES && (file.type || "").startsWith("video/");
 }
 
 function preferredVideoMimeType() {
@@ -2247,6 +2252,7 @@ async function compressVideoForUpload(file, onProgress = () => {}) {
     const context = canvas.getContext("2d", { alpha: false });
     const canvasStream = canvas.captureStream(Math.min(CLIENT_VIDEO_FPS, 30));
     const sourceStream = video.captureStream?.();
+    sourceStream?.getAudioTracks?.().forEach(track => canvasStream.addTrack(track));
     const chunks = [];
     const recorder = new MediaRecorder(canvasStream, {
       mimeType,

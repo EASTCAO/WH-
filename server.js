@@ -1628,7 +1628,10 @@ async function handleStorageSign(req, res) {
       relativePath: normalized.relativePath,
       kind: normalized.mediaKind,
       uploadedBy,
-      name: file.name || path.basename(normalized.relativePath)
+      name: file.name || path.basename(normalized.relativePath),
+      optimizedForUpload: Boolean(file.optimizedForUpload),
+      originalName: normalizeName(file.originalName),
+      originalSize: Number(file.originalSize || 0)
     };
     signedFile.ownerToken = uploadOwnerToken(signedFile);
     signed.push(signedFile);
@@ -1675,17 +1678,18 @@ async function handleStorageComplete(req, res) {
       });
     }
     const mediaId = file.id || hash(`${file.entryId}|${file.publicUrl}`);
+    const alreadyOptimizedVideo = file.kind === "video" && file.optimizedForUpload;
     grouped.get(key).media.push({
       id: mediaId,
       src: file.publicUrl,
       originalSrc: file.publicUrl,
       kind: file.kind,
       name: file.name || path.basename(file.objectKey || file.publicUrl),
-      optimized: false,
-      processing: file.kind === "video" && HAS_FFMPEG,
+      optimized: Boolean(alreadyOptimizedVideo),
+      processing: file.kind === "video" && HAS_FFMPEG && !alreadyOptimizedVideo,
       storage: "object"
     });
-    if (file.kind === "video" && HAS_FFMPEG) {
+    if (file.kind === "video" && HAS_FFMPEG && !alreadyOptimizedVideo) {
       optimizeJobs.push({
         entryId: file.entryId,
         mediaId,
