@@ -37,6 +37,7 @@ const STORAGE_ACCESS_KEY_ID = normalizeName(process.env.STORAGE_ACCESS_KEY_ID);
 const STORAGE_SECRET_ACCESS_KEY = normalizeName(process.env.STORAGE_SECRET_ACCESS_KEY);
 const STORAGE_PUBLIC_BASE_URL = normalizeName(process.env.STORAGE_PUBLIC_BASE_URL);
 const STORAGE_PREFIX = normalizeName(process.env.STORAGE_PREFIX || "photo-review");
+const STORAGE_ADDRESSING_STYLE = normalizeName(process.env.STORAGE_ADDRESSING_STYLE || "path").toLowerCase();
 
 if (!ADMIN_CODE && process.env.NODE_ENV === "production") {
   console.error("ADMIN_CODE is required in production.");
@@ -428,6 +429,22 @@ function publicStorageUrl(key) {
   return `${STORAGE_PUBLIC_BASE_URL.replace(/\/+$/, "")}/${encodeS3Key(key)}`;
 }
 
+function storageRequestTarget(key) {
+  const endpoint = new URL(STORAGE_ENDPOINT);
+  if (STORAGE_ADDRESSING_STYLE === "virtual") {
+    return {
+      host: `${STORAGE_BUCKET}.${endpoint.host}`,
+      canonicalUri: `/${encodeS3Key(key)}`,
+      origin: `${endpoint.protocol}//${STORAGE_BUCKET}.${endpoint.host}`
+    };
+  }
+  return {
+    host: endpoint.host,
+    canonicalUri: `/${encodeS3PathSegment(STORAGE_BUCKET)}/${encodeS3Key(key)}`,
+    origin: endpoint.origin
+  };
+}
+
 function isStoragePublicUrl(value) {
   if (!storageConfigured()) return false;
   try {
@@ -445,9 +462,9 @@ function proxiedMediaUrl(value) {
 }
 
 function createPresignedPutUrl(key, contentType, cacheControl) {
-  const endpoint = new URL(STORAGE_ENDPOINT);
-  const host = endpoint.host;
-  const canonicalUri = `/${encodeS3PathSegment(STORAGE_BUCKET)}/${encodeS3Key(key)}`;
+  const target = storageRequestTarget(key);
+  const host = target.host;
+  const canonicalUri = target.canonicalUri;
   const { amzDate, dateStamp } = s3Date();
   const credentialScope = `${dateStamp}/${STORAGE_REGION}/s3/aws4_request`;
   const credential = `${STORAGE_ACCESS_KEY_ID}/${credentialScope}`;
@@ -481,7 +498,7 @@ function createPresignedPutUrl(key, contentType, cacheControl) {
   ].join("\n");
   const signature = hmac(s3SigningKey(dateStamp), stringToSign, "hex");
   params.set("X-Amz-Signature", signature);
-  const url = new URL(`${endpoint.origin}${canonicalUri}`);
+  const url = new URL(`${target.origin}${canonicalUri}`);
   url.search = params.toString();
   return { url: url.toString(), contentType, cacheControl };
 }
@@ -2237,7 +2254,8 @@ function handleApi(req, res) {
       optimizeQueue: optimizeQueueState(),
       storage: {
         directUpload: storageConfigured(),
-        provider: storageConfigured() ? "s3" : "local"
+        provider: storageConfigured() ? "s3" : "local",
+        addressingStyle: storageConfigured() ? STORAGE_ADDRESSING_STYLE : "local"
       },
       optimization: {
         images: true,

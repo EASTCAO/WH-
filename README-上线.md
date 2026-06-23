@@ -82,14 +82,23 @@ STORAGE_ACCESS_KEY_ID=你的Access Key ID
 STORAGE_SECRET_ACCESS_KEY=你的Secret Access Key
 STORAGE_PUBLIC_BASE_URL=https://你的公开访问域名
 STORAGE_PREFIX=photo-review
+STORAGE_ADDRESSING_STYLE=path
 ```
+
+如果要对比国内对象存储，可以保留现有 R2 配置，复制一份国内 OSS/COS 配置后只切换环境变量：
+
+- Cloudflare R2：`STORAGE_ADDRESSING_STYLE=path`，`STORAGE_REGION=auto`
+- 阿里云 OSS S3 兼容：通常使用 `STORAGE_ADDRESSING_STYLE=virtual`，`STORAGE_ENDPOINT=https://oss-cn-城市.aliyuncs.com`，`STORAGE_REGION=oss-cn-城市`
+- 腾讯云 COS S3 兼容：通常使用 `STORAGE_ADDRESSING_STYLE=virtual`，`STORAGE_ENDPOINT=https://cos.地域.myqcloud.com`，`STORAGE_REGION=地域`
+
+切换后需要同步修改 `STORAGE_BUCKET`、`STORAGE_ACCESS_KEY_ID`、`STORAGE_SECRET_ACCESS_KEY`、`STORAGE_PUBLIC_BASE_URL`，再重新部署。想回到 R2 时，把这组变量换回 R2 即可。
 
 对象存储需要配置 CORS，至少允许网站域名发起 `PUT` 上传：
 
 ```json
 [
   {
-    "AllowedOrigins": ["https://whsj-photo-review.zeabur.app"],
+    "AllowedOrigins": ["https://whsj-photo-review.zeabur.app", "http://localhost:3000"],
     "AllowedMethods": ["PUT", "GET", "HEAD"],
     "AllowedHeaders": ["*"],
     "ExposeHeaders": ["ETag"],
