@@ -911,6 +911,7 @@ function voterEntry(entry, viewerName = "") {
 function publishedEntry(entry) {
   const item = voterEntry(entry);
   item.photographer = entry.photographer;
+  item.adminDisplayTitle = entryVideoAdminDisplayTitle(entry, readDb().photographers || []);
   return item;
 }
 

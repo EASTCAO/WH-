@@ -396,9 +396,22 @@ function entryMeta(entry) {
 }
 
 function resultDisplayTitle(entry) {
+  if (entry.adminDisplayTitle) return `${entry.adminDisplayTitle} ${circleNumber(entry)}`;
   const photographer = entry.photographer || "未识别摄影师";
   const sku = entry.sku ? cleanSku(entry.sku) : "未识别SKU";
   return `${photographer} · ${sku} ${circleNumber(entry)}`;
+}
+
+function splitResultDisplayTitle(entry) {
+  if (!entry.adminDisplayTitle) {
+    return {
+      name: entry.photographer || "未识别摄影师",
+      sku: entry.sku ? cleanSku(entry.sku) : "未识别SKU"
+    };
+  }
+  const match = String(entry.adminDisplayTitle).match(/^(.+?)-(.+)$/);
+  if (!match) return { name: entry.adminDisplayTitle, sku: entry.sku ? cleanSku(entry.sku) : "未识别SKU" };
+  return { sku: match[1], name: match[2] };
 }
 
 function circleNumber(entry) {
@@ -2774,15 +2787,14 @@ function drawResultPoster() {
       ctx.fillText(`第${index + 1}名`, padX + 36, midY + 20);
 
       // Name + SKU.
-      const photographer = entry.photographer || "未识别摄影师";
-      const sku = entry.sku ? cleanSku(entry.sku) : "未识别SKU";
+      const display = splitResultDisplayTitle(entry);
       ctx.textAlign = "left";
       ctx.fillStyle = mainText;
       ctx.font = `700 25px ${FONT}`;
-      ctx.fillText(photographer, padX + 82, midY - 11);
+      ctx.fillText(display.name, padX + 82, midY - 11);
       ctx.fillStyle = subText;
       ctx.font = `400 18px ${FONT}`;
-      ctx.fillText(sku, padX + 82, midY + 15);
+      ctx.fillText(display.sku, padX + 82, midY + 15);
 
       // Votes (right aligned).
       ctx.textAlign = "right";
