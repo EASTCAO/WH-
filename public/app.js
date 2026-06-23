@@ -327,6 +327,7 @@ function entryTitle(entry) {
     .sort((a, b) => a.sequence - b.sequence)
     .findIndex(item => item.id === entry.id);
   const displaySequence = String(moduleIndex + 1).padStart(2, "0");
+  if (adminMode && entry.adminDisplayTitle) return `${displaySequence} · ${entry.adminDisplayTitle}`;
   const skuText = entry.sku ? cleanSku(entry.sku) : "";
   const baseTitle = skuText ? `${displaySequence} · ${skuText}` : displaySequence;
   if (adminMode) return `${baseTitle} · ${entry.photographer || "未识别摄影师"}`;

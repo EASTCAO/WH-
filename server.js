@@ -641,6 +641,25 @@ function displaySkuForEntry(entry) {
   ]) || entry.sku;
 }
 
+function shouldUseVideoAdminDisplay(moduleName) {
+  return moduleName === "视频（卖点）" || moduleName === "视频（质量）";
+}
+
+function videoAdminDisplayTitle(info, photographers = []) {
+  if (!shouldUseVideoAdminDisplay(info.moduleName)) return "";
+  const sku = bestSkuCandidate([info.sku, info.title, info.workFolder, info.relativePath], photographers) || info.sku;
+  const names = knownPhotographerNames([
+    info.workFolder,
+    info.relativePath,
+    info.title,
+    info.photographer
+  ], photographers);
+  if (!sku || !names.length) return "";
+  const primary = names[0] || info.photographer;
+  const secondary = names.find(name => name !== primary) || "";
+  return secondary ? `${sku}-${primary}（${secondary}）` : `${sku}-${primary}`;
+}
+
 function isExcludedUploadPath(relativePath) {
   return relativePath
     .split(/[\\/]+/)
@@ -666,6 +685,8 @@ function normalizeUploadFile(file, fallbackModuleName, photographers, periodId, 
   const mediaKind = IMAGE_TYPES.has(ext) ? "image" : VIDEO_TYPES.has(ext) ? "video" : "file";
   if (!MODULE_BY_NAME.has(info.moduleName)) return null;
   if (expectedKind && expectedKind !== mediaKind) return null;
+  info.relativePath = relativePath;
+  info.adminDisplayTitle = videoAdminDisplayTitle(info, photographers);
 
   const entryId = hash(`${periodId}|${info.moduleName}|${info.photographer}|${info.sku}|${info.title}`);
   return { ...file, ...info, entryId, relativePath, ext, mediaKind };
@@ -821,6 +842,7 @@ function publicEntry(entry) {
     photographer: entry.photographer,
     sku: displaySku,
     title: entry.title,
+    adminDisplayTitle: entry.adminDisplayTitle || "",
     sequence: entry.sequence || 0,
     mediaCount: viewMedia.length,
     imageCount: viewMedia.filter(item => item.kind === "image").length,
@@ -1491,6 +1513,8 @@ async function handleUpload(req, res) {
     const info = refineUploadSku(parseUploadPath(relativePath, fallbackModuleName), relativePath, photographers);
     const knownPhotographer = knownPhotographerNames([info.photographer, info.workFolder, info.sku, info.title, relativePath], photographers);
     const uploadedBy = applyUploadOwner(info, uploaderName, knownPhotographer, photographers);
+    info.relativePath = relativePath;
+    info.adminDisplayTitle = videoAdminDisplayTitle(info, photographers);
     const expectedKind = MODULE_BY_NAME.get(info.moduleName)?.kind;
     const mediaKind = IMAGE_TYPES.has(ext) ? "image" : VIDEO_TYPES.has(ext) ? "video" : "file";
     if (!MODULE_BY_NAME.has(info.moduleName)) continue;
@@ -1627,6 +1651,7 @@ async function handleStorageSign(req, res) {
       photographer: normalized.photographer,
       sku: normalized.sku,
       title: normalized.title,
+      adminDisplayTitle: normalized.adminDisplayTitle || "",
       relativePath: normalized.relativePath,
       kind: normalized.mediaKind,
       uploadedBy,
@@ -1858,10 +1883,13 @@ async function saveEntryMediaGroups(groups) {
         photographer: group.photographer,
         sku: group.sku,
         title: group.title,
+        adminDisplayTitle: group.adminDisplayTitle || "",
         sequence: db.nextSequence++,
         media: [],
         createdAt: new Date().toISOString()
       };
+
+      if (group.adminDisplayTitle) entry.adminDisplayTitle = group.adminDisplayTitle;
 
       entry.media ||= [];
       entry.media.push(...group.media);
