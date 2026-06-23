@@ -1321,20 +1321,24 @@ function renderGallery() {
     const activeLocked = isModuleLocked(activeModule.name);
     const isSelected = activeBucket().has(entry.id);
     const hasProcessingVideo = (entry.media || []).some(item => item.kind === "video" && item.processing);
+    const hasVideoProcessError = (entry.media || []).some(item => item.kind === "video" && item.error);
     node.classList.toggle("selected", isSelected);
     node.classList.toggle("own-entry", isOwn);
     node.classList.toggle("vote-locked", activeLocked);
     node.classList.toggle("is-processing", hasProcessingVideo);
+    node.classList.toggle("has-process-error", hasVideoProcessError);
     node.classList.toggle("disabled", Boolean(isOwn || activeLocked));
     node.querySelector(".entry-title").textContent = entryTitle(entry);
     node.querySelector(".entry-meta").textContent = entryMeta(entry);
     node.querySelector(".entry-hint").textContent = isOwn
       ? "我的作品，仅可查看"
       : "点击查看全部图片";
-    if (hasProcessingVideo) {
+    if (hasProcessingVideo || hasVideoProcessError) {
       const badge = document.createElement("div");
-      badge.className = "entry-processing-badge";
-      badge.innerHTML = `<i aria-hidden="true"></i><span>缓存中</span>`;
+      badge.className = `entry-processing-badge${hasVideoProcessError ? " is-error" : ""}`;
+      badge.innerHTML = hasVideoProcessError
+        ? `<i aria-hidden="true">!</i><span>可先播放原视频</span>`
+        : `<i aria-hidden="true"></i><span>缓存中</span>`;
       node.querySelector(".entry-info").appendChild(badge);
     }
     node.querySelector(".vote-check").disabled = !voter || Boolean(isOwn) || activeLocked;

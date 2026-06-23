@@ -830,7 +830,8 @@ function voterMedia(entry) {
     src: item.kind === "video" ? proxiedMediaUrl(item.src) : item.src,
     fallbackSrc: isStoragePublicUrl(item.src) ? proxiedMediaUrl(item.src) : "",
     kind: item.kind,
-    processing: Boolean(item.processing)
+    processing: Boolean(item.processing),
+    error: normalizeName(item.error)
   }));
 }
 
