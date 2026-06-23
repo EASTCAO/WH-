@@ -203,6 +203,12 @@ function assertUploaderCanCreateModuleEntry(db, uploaderName, moduleName, allowe
   }
 }
 
+function assertPhotographerUploadOpen(db, uploaderName, adminUpload) {
+  if (uploaderName && !adminUpload && db.votingOpen) {
+    throw new Error("投票已开始，摄影师不能再上传作品。如需补传，请联系管理员后台处理。");
+  }
+}
+
 function currentBallots(db) {
   return (db.ballots || []).filter(ballot => (ballot.periodId || db.currentPeriodId) === db.currentPeriodId);
 }
@@ -1469,6 +1475,7 @@ async function handleUpload(req, res) {
   if (!uploaderName && !adminUpload) {
     throw new Error("请先登录摄影师姓名上传本人作品，或使用管理员后台代传。");
   }
+  assertPhotographerUploadOpen(dbSnapshot, uploaderName, adminUpload);
   const grouped = new Map();
 
   if (files.length > MAX_FILES_PER_UPLOAD) {
@@ -1557,6 +1564,7 @@ async function handleUploadPreviewOwner(req, res) {
   const photographers = dbSnapshot.photographers || [];
   const uploaderName = resolveUploaderName(payload.uploaderName, photographers);
   const adminUpload = !uploaderName && isAdminPayload(payload);
+  assertPhotographerUploadOpen(dbSnapshot, uploaderName, adminUpload);
   const preview = resolveUploadOwnership(files, fallbackModuleName, uploaderName, adminUpload, photographers, dbSnapshot.currentPeriodId);
   sendJson(res, 200, { ok: true, ...preview });
 }
@@ -1575,6 +1583,7 @@ async function handleStorageSign(req, res) {
   if (!uploaderName && !adminUpload) {
     throw new Error("请先登录摄影师姓名上传本人作品，或使用管理员后台代传。");
   }
+  assertPhotographerUploadOpen(dbSnapshot, uploaderName, adminUpload);
   const uploadNonce = crypto.randomBytes(6).toString("hex");
   const signed = [];
 
@@ -1636,6 +1645,10 @@ async function handleStorageComplete(req, res) {
   let mediaTotal = 0;
   const dbSnapshot = readDb();
   const seenUploaderModules = new Set();
+
+  if (uploaded.some(file => file.uploadedBy === "photographer")) {
+    assertPhotographerUploadOpen(dbSnapshot, "摄影师", false);
+  }
 
   for (const file of uploaded) {
     if (!file.entryId || !file.publicUrl || !file.moduleName) continue;

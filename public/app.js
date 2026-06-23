@@ -1302,7 +1302,7 @@ function renderGallery() {
     const uploadHint = canUpload
       ? (adminMode
         ? `管理员代传：把带摄影师姓名的文件夹拖到这里，上传到 ${activeModule.name}`
-        : `把自己的作品拖到这里，上传到 ${activeModule.name}`)
+        : (votingOpen ? "投票已开始，如需补传请联系管理员" : `把自己的作品拖到这里，上传到 ${activeModule.name}`))
       : "请先登录自己的姓名后再上传作品";
     const message = `${currentPeriodName || "当前月份"} 的 ${activeModule.name} 暂无作品`;
     gallery.innerHTML = `
@@ -1910,6 +1910,11 @@ function enqueueUpload(files, moduleName) {
 }
 
 async function uploadFiles(files, moduleName) {
+  if (!adminMode && votingOpen) {
+    setStatus("投票已开始，摄影师不能再上传作品。如需补传，请联系管理员后台处理。");
+    showToast("投票已开始，不能再上传", "error");
+    return;
+  }
   if (!adminMode && !voterName()) {
     setStatus("请先登录自己的姓名后再上传");
     return;
