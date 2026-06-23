@@ -683,6 +683,24 @@ main {
   line-height: 1.35;
 }
 
+.admin-vote-ready-action {
+  width: 100%;
+  margin-top: 9px;
+  padding: 8px 10px;
+  border: 1px solid rgba(180, 35, 24, 0.22);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #991b1b;
+  font-size: 12px;
+  font-weight: 760;
+  cursor: pointer;
+}
+
+.admin-vote-ready-action:hover {
+  border-color: rgba(180, 35, 24, 0.36);
+  background: #fff5f5;
+}
+
 .admin-vote-ready.is-done {
   border-color: #9fd6b2;
   background: #edf8f1;
@@ -932,6 +950,16 @@ body[data-theme="dark"] .admin-vote-missing-row em {
   border-color: rgba(248, 113, 113, 0.3);
   background: rgba(180, 35, 24, 0.18);
   color: #fecaca;
+}
+
+body[data-theme="dark"] .admin-vote-ready-action {
+  border-color: rgba(248, 113, 113, 0.32) !important;
+  background: rgba(180, 35, 24, 0.16) !important;
+  color: #fecaca !important;
+}
+
+body[data-theme="dark"] .admin-vote-ready-action:hover {
+  background: rgba(180, 35, 24, 0.24) !important;
 }
 
 body[data-theme="dark"] .voting-status-summary strong,

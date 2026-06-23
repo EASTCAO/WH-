@@ -807,22 +807,10 @@ function renderAdminVoteReady() {
     return;
   }
   adminVoteReady.className = "admin-vote-ready is-pending";
-  const pendingRows = stats.pendingModules.slice(0, 6).map(module => {
-    const notVoted = module.notVoted || [];
-    return `
-      <div class="admin-vote-missing-row">
-        <span>${escapeHtml(module.name)}</span>
-        <p><b>未投 ${notVoted.length} 人</b></p>
-      </div>
-    `;
-  }).join("");
-  const hiddenModules = stats.pendingModules.length > 6
-    ? `<div class="admin-vote-missing-more">还有 ${stats.pendingModules.length - 6} 个模块，点「投票进度」查看名单。</div>`
-    : "";
   adminVoteReady.innerHTML = `
     <strong>还差 ${stats.pendingPeople} 人未投</strong>
     <span>${stats.pendingModules.length} 个模块未完成，已投 ${stats.totalVoted}/${stats.totalExpected} 人次。</span>
-    <div class="admin-vote-missing-list">${pendingRows}${hiddenModules}</div>
+    <button class="admin-vote-ready-action" type="button">查看未投详情</button>
   `;
 }
 
@@ -1005,6 +993,14 @@ function openResultsPreviewDialog() {
   openAdminInfoDialog("后台票数预览", wrapper, { wide: true, resultsPreview: true });
 }
 
+function openVotingStatusDialog() {
+  if (!votingStatusList) return;
+  const wrapper = document.createElement("div");
+  if (votingStatusSummary?.innerHTML.trim()) wrapper.appendChild(votingStatusSummary.cloneNode(true));
+  wrapper.appendChild(votingStatusList.cloneNode(true));
+  openAdminInfoDialog("投票进度", wrapper);
+}
+
 function openNextPeriodDialog() {
   renderPeriodCalendar();
   nextPeriodDialog?.showModal();
@@ -1013,7 +1009,7 @@ function openNextPeriodDialog() {
 function bindAdminInfoCards() {
   [
     { detail: moduleVotersAdmin, title: "投票名单分组", content: moduleVotersList, interactiveVoters: true },
-    { detail: votingStatusAdmin, title: "投票进度", content: votingStatusList, extra: votingStatusSummary },
+    { detail: votingStatusAdmin, customOpen: openVotingStatusDialog },
     { detail: ballotAdmin, title: "投票记录", content: ballotList },
     { detail: resultsPreviewAdmin, customOpen: openResultsPreviewDialog }
   ].forEach(item => {
@@ -2566,6 +2562,12 @@ if (photographerResultCard) {
     if (!resultsPublished) return;
     resultDialogDismissed = false;
     openResultDialogIfNeeded(true);
+  });
+}
+if (adminVoteReady) {
+  adminVoteReady.addEventListener("click", event => {
+    if (!adminMode || !event.target.closest(".admin-vote-ready-action")) return;
+    openVotingStatusDialog();
   });
 }
 if (closeAdminInfoDialog) closeAdminInfoDialog.addEventListener("click", () => adminInfoDialog?.close());
