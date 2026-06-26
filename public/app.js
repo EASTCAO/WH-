@@ -2010,7 +2010,10 @@ async function uploadBatchToObjectStorage(batch, moduleName, batchNo, batchCount
     size: file.size || 0,
     optimizedForUpload: Boolean(file.optimizedForUpload),
     originalName: file.originalName || "",
-    originalSize: file.originalSize || 0
+    originalSize: file.originalSize || 0,
+    uploadSourceKey: file.uploadSourceKey || "",
+    displayFor: file.displayFor || "",
+    displayOriginalRelativePath: file.displayOriginalRelativePath || ""
   }));
   setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batchCount} 批准备直传对象存储...`);
   const signed = await fetchJson("/api/storage/sign", {
@@ -2115,10 +2118,11 @@ async function prepareUploadBatchForTransfer(batch, moduleName, batchNo, batchCo
   const prepared = [];
   for (const [index, file] of batch.entries()) {
     setStatus(`正在上传到 ${moduleName}：第 ${batchNo}/${batchCount} 批准备文件 ${index + 1}/${batch.length}...`);
-    const nextFile = await prepareDirectUploadFile(file, progress => {
+    const nextFiles = await prepareDirectUploadFile(file, progress => {
       setStatus(`正在压缩视频：${file.name} · ${progress}%`);
     });
-    prepared.push(nextFile);
+    if (Array.isArray(nextFiles)) prepared.push(...nextFiles);
+    else prepared.push(nextFiles);
   }
   return prepared;
 }
@@ -2133,8 +2137,10 @@ async function prepareDirectUploadFile(file) {
       });
       if (!compressed || compressed.size >= file.size) return file;
       const extension = extensionForVideoMime(compressed.type);
-      const optimizedName = file.name.replace(/\.[^.]+$/, extension);
-      const optimizedRelativePath = relativePath.replace(/\.[^.]+$/, extension);
+      const optimizedName = file.name.replace(/\.[^.]+$/, `_display${extension}`);
+      const optimizedRelativePath = relativePath.replace(/\.[^.]+$/, `_display${extension}`);
+      const sourceKey = uploadSourceKey(relativePath, file.size);
+      file.uploadSourceKey = sourceKey;
       const optimizedFile = new File([compressed], optimizedName, {
         type: compressed.type,
         lastModified: file.lastModified
@@ -2144,7 +2150,9 @@ async function prepareDirectUploadFile(file) {
       optimizedFile.originalSize = file.size || 0;
       optimizedFile.uploadSavedBytes = file.size - optimizedFile.size;
       optimizedFile.optimizedForUpload = true;
-      return optimizedFile;
+      optimizedFile.displayFor = sourceKey;
+      optimizedFile.displayOriginalRelativePath = relativePath;
+      return [file, optimizedFile];
     } catch {
       return file;
     }
@@ -2175,7 +2183,11 @@ function shouldOptimizeUploadImage(file) {
 }
 
 function shouldOptimizeUploadVideo(file) {
-  return false;
+  return file.size >= CLIENT_VIDEO_OPTIMIZE_MIN_BYTES && /^video\//.test(file.type || "");
+}
+
+function uploadSourceKey(relativePath, size) {
+  return `${relativePath}|${size || 0}`;
 }
 
 function preferredVideoMimeType() {

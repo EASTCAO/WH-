@@ -54,7 +54,7 @@ const MODULES = [
   { id: "image-assistant", name: "图片助理", kind: "image", voteLimit: 2 },
   { id: "video-selling", name: "视频（卖点）", kind: "video", voteLimit: 1 },
   { id: "video-quality", name: "视频（质量）", kind: "video", voteLimit: 1 },
-  { id: "simple-video", name: "简易视频", kind: "video", voteLimit: 1 },
+  { id: "simple-video", name: "简易视频", kind: "video", voteLimit: 2 },
   { id: "ai-video", name: "AI视频", kind: "video", voteLimit: 1 },
   { id: "video-assistant", name: "视频助理", kind: "video", voteLimit: 1 }
 ];
@@ -396,7 +396,9 @@ function uploadOwnerToken(file) {
     normalizeName(file.moduleName),
     normalizeName(file.photographer),
     normalizeName(file.uploadedBy),
-    normalizeName(file.objectKey)
+    normalizeName(file.objectKey),
+    normalizeName(file.displayFor),
+    normalizeName(file.uploadSourceKey)
   ].join("|"), "hex").slice(0, 24);
 }
 
@@ -937,7 +939,6 @@ function mediaArchiveName(entry, media, index) {
 }
 
 function mediaSourceForArchive(media) {
-  if (media.kind === "video" && media.optimized && media.src) return media.src;
   return media.originalSrc || media.src;
 }
 
@@ -1644,8 +1645,12 @@ async function handleStorageSign(req, res) {
     return sendJson(res, 400, { error: `单次最多上传 ${MAX_FILES_PER_UPLOAD} 个文件` });
   }
 
+  const signedBySourceKey = new Map();
   for (const [index, file] of files.entries()) {
-    const normalized = normalizeUploadFile(file, fallbackModuleName, photographers, periodId, false);
+    const displayFor = normalizeName(file.displayFor);
+    const displaySource = displayFor ? signedBySourceKey.get(displayFor) : null;
+    const sourceRelativePath = displaySource ? displaySource.relativePath : (file.displayOriginalRelativePath || file.relativePath);
+    const normalized = normalizeUploadFile({ ...file, relativePath: sourceRelativePath }, fallbackModuleName, photographers, periodId, false);
     if (!normalized) continue;
     const knownPhotographer = knownPhotographerNames([normalized.photographer, normalized.workFolder, normalized.sku, normalized.title, normalized.relativePath], photographers);
     let uploadedBy = "admin";
@@ -1659,7 +1664,9 @@ async function handleStorageSign(req, res) {
       : hash(`${periodId}|${normalized.moduleName}|${normalized.photographer}|${normalized.sku}|${normalized.title}`);
     if (uploaderName) assertUploaderCanCreateModuleEntry(dbSnapshot, uploaderName, normalized.moduleName, normalized.entryId);
     const serial = String(index + 1).padStart(3, "0");
-    const filename = `${safeSegment(normalized.sku)}_${uploadNonce}_${serial}${normalized.ext}`;
+    const fileExt = path.extname(file.name || "") || normalized.ext;
+    const displaySuffix = displayFor ? "_display" : "";
+    const filename = `${safeSegment(normalized.sku)}_${uploadNonce}_${serial}${displaySuffix}${fileExt}`;
     const objectKey = createStorageObjectKey(periodId, normalized.entryId, filename);
     const publicUrl = publicStorageUrl(objectKey);
     const signedUrl = createPresignedPutUrl(objectKey, normalizeName(file.type) || contentTypeFor(filename));
@@ -1685,10 +1692,14 @@ async function handleStorageSign(req, res) {
       name: file.name || path.basename(normalized.relativePath),
       optimizedForUpload: Boolean(file.optimizedForUpload),
       originalName: normalizeName(file.originalName),
-      originalSize: Number(file.originalSize || 0)
+      originalSize: Number(file.originalSize || 0),
+      uploadSourceKey: normalizeName(file.uploadSourceKey),
+      displayFor,
+      displayOriginalRelativePath: normalizeName(file.displayOriginalRelativePath)
     };
     signedFile.ownerToken = uploadOwnerToken(signedFile);
     signed.push(signedFile);
+    if (!displayFor) signedBySourceKey.set(normalizeName(file.uploadSourceKey) || normalizeName(normalized.relativePath), signedFile);
   }
 
   sendJson(res, 200, { ok: true, storage: "s3", files: signed });
@@ -1707,11 +1718,17 @@ async function handleStorageComplete(req, res) {
     assertPhotographerUploadOpen(dbSnapshot, "摄影师", false);
   }
 
+  const displayFilesBySource = new Map();
+  for (const file of uploaded) {
+    if (normalizeName(file.displayFor)) displayFilesBySource.set(normalizeName(file.displayFor), file);
+  }
+
   for (const file of uploaded) {
     if (!file.entryId || !file.publicUrl || !file.moduleName) continue;
     if (file.ownerToken !== uploadOwnerToken(file)) {
       throw new Error("上传归属校验失败，请重新上传");
     }
+    if (normalizeName(file.displayFor)) continue;
     const ownerModuleKey = `${file.photographer}|${file.moduleName}`;
     if (file.uploadedBy === "photographer" && file.photographer && file.moduleName && !seenUploaderModules.has(ownerModuleKey)) {
       assertUploaderCanCreateModuleEntry(dbSnapshot, file.photographer, file.moduleName, file.entryId);
@@ -1733,14 +1750,14 @@ async function handleStorageComplete(req, res) {
     }
     const mediaId = file.id || hash(`${file.entryId}|${file.publicUrl}`);
     const videoDirectUpload = file.kind === "video";
-    const alreadyOptimizedVideo = videoDirectUpload && file.optimizedForUpload;
+    const displayFile = displayFilesBySource.get(normalizeName(file.uploadSourceKey));
     grouped.get(key).media.push({
       id: mediaId,
-      src: file.publicUrl,
+      src: displayFile?.publicUrl || file.publicUrl,
       originalSrc: file.publicUrl,
       kind: file.kind,
       name: file.name || path.basename(file.objectKey || file.publicUrl),
-      optimized: Boolean(videoDirectUpload || alreadyOptimizedVideo),
+      optimized: Boolean(videoDirectUpload && displayFile?.publicUrl),
       processing: false,
       storage: "object"
     });
@@ -2349,8 +2366,12 @@ function handleApi(req, res) {
 
   if (req.method === "GET" && url.pathname === "/api/entries") {
     const viewerName = normalizeName(url.searchParams.get("voterName"));
-    const view = canViewAdmin(url) ? publicEntry : entry => voterEntry(entry, viewerName);
-    const entries = currentEntries(db).map(view).sort((a, b) => a.sequence - b.sequence);
+    const adminView = canViewAdmin(url);
+    const view = adminView ? publicEntry : entry => voterEntry(entry, viewerName);
+    const visibleEntries = adminView || db.votingOpen
+      ? currentEntries(db)
+      : currentEntries(db).filter(entry => viewerName && entry.photographer === viewerName);
+    const entries = visibleEntries.map(view).sort((a, b) => a.sequence - b.sequence);
     sendJson(res, 200, { modules: MODULES, entries });
     return;
   }
